@@ -1,0 +1,55 @@
+2/7/2026 15:48:40: Iniciando aplicacion con estado inteligente...
+2/7/2026 16:04:36: Iniciando aplicacion con estado inteligente...
+2/7/2026 16:22:42: Iniciando aplicacion con estado inteligente...
+2/7/2026 16:24:19: Iniciando aplicacion con estado inteligente...
+2/7/2026 16:28:48: Iniciando aplicacion con estado inteligente...
+2/7/2026 16:28:48: Atajos registrados correctamente.
+2/7/2026 17:24:59: Iniciando aplicacion con estado inteligente...
+2/7/2026 17:24:59: Atajos registrados correctamente.
+2/7/2026 17:25:06: Hotkey presionado: 1
+2/7/2026 17:25:13: Hotkey presionado: 1
+2/7/2026 17:25:16: Hotkey presionado: 1
+2/7/2026 17:25:25: Hotkey presionado: 1
+2/7/2026 17:25:32: Hotkey presionado: 1
+2/7/2026 17:26:04: Hotkey presionado: 1
+2/7/2026 17:26:06: Hotkey presionado: 1
+2/7/2026 17:26:25: Hotkey presionado: 1
+2/7/2026 17:26:27: Hotkey presionado: 1
+2/7/2026 17:26:45: Hotkey presionado: 1
+2/7/2026 17:26:47: Hotkey presionado: 1
+2/7/2026 17:27:05: Hotkey presionado: 1
+2/7/2026 17:27:07: Hotkey presionado: 1
+2/7/2026 17:27:15: Hotkey presionado: 1
+2/7/2026 17:27:19: Hotkey presionado: 1
+2/7/2026 17:27:22: Hotkey presionado: 1
+2/7/2026 17:27:39: Hotkey presionado: 1
+2/7/2026 17:27:41: Hotkey presionado: 3
+2/7/2026 17:27:41: Velocidad: 2
+2/7/2026 17:27:41: Hotkey presionado: 3
+2/7/2026 17:27:41: Velocidad: 3
+2/7/2026 17:27:41: Hotkey presionado: 3
+2/7/2026 17:27:41: Velocidad: 4
+2/7/2026 17:27:42: Hotkey presionado: 2
+2/7/2026 17:27:42: Velocidad: 3
+2/7/2026 17:27:43: Hotkey presionado: 2
+2/7/2026 17:27:43: Velocidad: 2
+2/7/2026 17:27:43: Hotkey presionado: 2
+2/7/2026 17:27:43: Velocidad: 1
+2/7/2026 17:27:43: Hotkey presionado: 2
+2/7/2026 17:27:43: Velocidad: 0
+2/7/2026 17:27:44: Hotkey presionado: 2
+2/7/2026 17:27:44: Velocidad: -1
+2/7/2026 17:27:44: Hotkey presionado: 2
+2/7/2026 17:27:44: Velocidad: -2
+2/7/2026 17:27:45: Hotkey presionado: 3
+2/7/2026 17:27:45: Velocidad: -1
+2/7/2026 17:27:46: Hotkey presionado: 3
+2/7/2026 17:27:46: Velocidad: 0
+2/7/2026 17:27:46: Hotkey presionado: 3
+2/7/2026 17:27:46: Velocidad: 1
+2/7/2026 17:27:46: Hotkey presionado: 3
+2/7/2026 17:27:46: Velocidad: 2
+2/7/2026 17:27:47: Hotkey presionado: 3
+2/7/2026 17:27:47: Velocidad: 3
+2/7/2026 17:28:30: Hotkey presionado: 1
+2/7/2026 17:28:32: Hotkey presionado: 1
