@@ -36,3 +36,11 @@ local.properties
 # User-specific files
 lector_hotkeys.txt
 lector_stats.json
+
+# Exclude AI agent and flow files
+.agents/
+SKILL.md
+Wispr Flow/
+
+# Exclude publish folder
+[Pp]ublish/

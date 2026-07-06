@@ -26,7 +26,7 @@ Por defecto, la aplicación utiliza los siguientes atajos (que ahora pueden conf
 
 ## 🚀 Instalación y Uso
 1. Asegúrate de tener instalado el SDK de .NET 8.
-2. Clona el repositorio y navega al directorio `LectorGlobalApp`.
+2. Clona el repositorio y navega al directorio `Aloud`.
 3. Ejecuta `dotnet run` para iniciar la aplicación.
 4. (Opcional) Configura tus credenciales de Supabase en `SupabaseManager.cs` para activar la nube.
 
