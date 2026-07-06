@@ -1,0 +1,10 @@
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\Aloud.exe
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\logo_sin_fondo.png
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\logo_fondo_blanco.png
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\logo_fondo_negro.png
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\Aloud.dll
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\Aloud.deps.json
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\Aloud.runtimeconfig.json
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\Aloud.pdb
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\System.Speech.dll
+C:\Antigravity_proyectos\Lector e IDE\LectorGlobalApp\publish\Velopack.dll

@@ -1,0 +1,58 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0/win-x64",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {},
+    ".NETCoreApp,Version=v8.0/win-x64": {
+      "Aloud/1.0.0": {
+        "dependencies": {
+          "System.Speech": "10.0.9",
+          "Velopack": "1.2.0"
+        },
+        "runtime": {
+          "Aloud.dll": {}
+        }
+      },
+      "System.Speech/10.0.9": {
+        "runtime": {
+          "runtimes/win/lib/net8.0/System.Speech.dll": {
+            "assemblyVersion": "10.0.0.9",
+            "fileVersion": "10.0.926.27113"
+          }
+        }
+      },
+      "Velopack/1.2.0": {
+        "runtime": {
+          "lib/net8.0/Velopack.dll": {
+            "assemblyVersion": "1.2.0.0",
+            "fileVersion": "1.2.0.62189"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Aloud/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "System.Speech/10.0.9": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Vu3phH8vWRFhzMp5D/H64LZlYNQ/2PAb7aAnw5DxfeQo1hAaA4CjQReIrqrqbjzpkIbuUpX1YwAEGNQlFPaeUw==",
+      "path": "system.speech/10.0.9",
+      "hashPath": "system.speech.10.0.9.nupkg.sha512"
+    },
+    "Velopack/1.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Rz67gJL619fSBS6omaSINUxyDuwhIxkm5mmubf7uLd5Qgi6LLKaKCha+QFP6n+Bw/UjA0vutnH4JQfYzn6ANtw==",
+      "path": "velopack/1.2.0",
+      "hashPath": "velopack.1.2.0.nupkg.sha512"
+    }
+  }
+}

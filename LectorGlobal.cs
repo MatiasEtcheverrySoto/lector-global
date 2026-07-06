@@ -53,12 +53,37 @@ namespace LectorGlobal
             Log("Iniciando aplicacion con estado inteligente...");
             form = new DummyForm(this);
             
-            int mods = MOD_CTRL | MOD_WIN;
+            int hkZ_Mod = MOD_CTRL | MOD_WIN;
+            int hkZ_Key = (int)Keys.Z;
+            int hkX_Mod = MOD_CTRL | MOD_WIN;
+            int hkX_Key = (int)Keys.X;
+            int hkA_Mod = MOD_CTRL | MOD_WIN;
+            int hkA_Key = (int)Keys.A;
+
+            string hotkeyFile = Path.Combine(Environment.CurrentDirectory, "lector_hotkeys.txt");
+            if (File.Exists(hotkeyFile))
+            {
+                var lines = File.ReadAllLines(hotkeyFile);
+                foreach (var line in lines)
+                {
+                    var p = line.Split('=');
+                    if (p.Length == 2)
+                    {
+                        var vals = p[1].Split(',');
+                        if (vals.Length == 2 && int.TryParse(vals[0], out int mod) && int.TryParse(vals[1], out int key))
+                        {
+                            if (p[0] == "Read") { hkZ_Mod = mod; hkZ_Key = key; }
+                            else if (p[0] == "Slower") { hkX_Mod = mod; hkX_Key = key; }
+                            else if (p[0] == "Faster") { hkA_Mod = mod; hkA_Key = key; }
+                        }
+                    }
+                }
+            }
             
             // Register hotkeys
-            bool r1 = RegisterHotKey(form.Handle, 1, mods, (int)Keys.Z); // Read/Pause/Swap
-            bool r2 = RegisterHotKey(form.Handle, 2, mods, (int)Keys.X); // Speed Down
-            bool r3 = RegisterHotKey(form.Handle, 3, mods, (int)Keys.A); // Speed Up (A instead of V)
+            bool r1 = RegisterHotKey(form.Handle, 1, hkZ_Mod, hkZ_Key); // Read/Pause/Swap
+            bool r2 = RegisterHotKey(form.Handle, 2, hkX_Mod, hkX_Key); // Speed Down
+            bool r3 = RegisterHotKey(form.Handle, 3, hkA_Mod, hkA_Key); // Speed Up (A instead of V)
             
             if (!r1 || !r2 || !r3) {
                 Log("¡ERROR CRÍTICO! Windows bloqueó los atajos. Z=" + r1 + " X=" + r2 + " A=" + r3 + ". ¿Hay otro programa o copia de seguridad usándolos?");
@@ -123,6 +148,34 @@ namespace LectorGlobal
             }
         }
 
+        private string SafeGetClipboardText()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try { if (Clipboard.ContainsText()) return Clipboard.GetText(); return null; }
+                catch { Thread.Sleep(50); }
+            }
+            return null;
+        }
+
+        private void SafeSetClipboardText(string text)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try { Clipboard.SetText(text); return; }
+                catch { Thread.Sleep(50); }
+            }
+        }
+
+        private void SafeClearClipboard()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try { Clipboard.Clear(); return; }
+                catch { Thread.Sleep(50); }
+            }
+        }
+
         private bool isProcessingHotkey = false;
 
         public async void HandleHotkey(int id)
@@ -163,24 +216,23 @@ namespace LectorGlobal
                         await Task.Delay(50);
                     }
 
-                string backup = Clipboard.ContainsText() ? Clipboard.GetText() : null;
-                Clipboard.Clear();
+                string backup = SafeGetClipboardText();
+                SafeClearClipboard();
                 
                 SendKeys.SendWait("^{c}");
                 Thread.Sleep(200);
                 
-                string newText = "";
-                if (Clipboard.ContainsText())
+                string newText = SafeGetClipboardText() ?? "";
+                if (!string.IsNullOrEmpty(newText))
                 {
-                    newText = Clipboard.GetText();
                     // Filtramos emojis (surrogates) y caracteres que no sean letras, numeros, puntuacion o espacios
                     newText = new string(newText.Where(c => !char.IsSurrogate(c)).ToArray());
                     newText = System.Text.RegularExpressions.Regex.Replace(newText, @"[^\p{L}\p{Nd}\p{P}\p{Z}\s]", "");
                 }
                 
                 // Restaurar el portapapeles original
-                if (backup != null) Clipboard.SetText(backup);
-                else Clipboard.Clear();
+                if (backup != null) SafeSetClipboardText(backup);
+                else SafeClearClipboard();
                 
                 if (synth.State == SynthesizerState.Speaking || synth.State == SynthesizerState.Paused)
                 {

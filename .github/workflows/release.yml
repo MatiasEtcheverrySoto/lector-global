@@ -1,0 +1,39 @@
+name: Build and Release Aloud
+
+on:
+  push:
+    tags:
+      - 'v*' # Se ejecuta al subir un tag como v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Publish App
+        run: dotnet publish "LectorGlobalApp/LectorGlobalApp.csproj" -c Release -r win-x64 -o publish_folder --self-contained false
+
+      - name: Pack with Velopack
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          vpk pack -u Aloud -v $version -p publish_folder -e Aloud.exe -i LectorGlobalApp/logo.ico
+          
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Releases/*
+          generate_release_notes: true

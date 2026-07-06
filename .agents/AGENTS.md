@@ -4,30 +4,19 @@
 Este proyecto es un **lector de texto en segundo plano** para Windows (LectorGlobal). Permite al usuario seleccionar cualquier texto en el sistema, presionar un atajo de teclado y escucharlo mediante síntesis de voz (`System.Speech.Synthesis`), restaurando el contenido original del portapapeles una vez capturado.
 
 ## 📁 Arquitectura y Ubicación de Archivos
-Actualmente, los archivos principales del código fuente se encuentran **fuera** de esta carpeta:
-- **Script VBS de entrada:** `C:\Antigravity_proyectos\LectorTexto.vbs` (Lanza el script de PowerShell de forma oculta).
-- **Script de PowerShell:** `C:\Users\matie\.gemini\antigravity-ide\brain\204567db-dde4-46c8-ab3f-2490ab12144f\scratch\RunLector.ps1` (Detiene instancias anteriores, compila en memoria el C# y ejecuta la aplicación).
-- **Código Fuente C#:** `C:\Users\matie\.gemini\antigravity-ide\brain\204567db-dde4-46c8-ab3f-2490ab12144f\scratch\LectorGlobal.cs` (Contiene la lógica core).
-- **Log de Ejecución:** `C:\Users\matie\.gemini\antigravity-ide\brain\204567db-dde4-46c8-ab3f-2490ab12144f\scratch\lector_log.txt`
+El proyecto ahora es una **aplicación de escritorio C# WPF** bajo el directorio `LectorGlobalApp`.
+- **UI (Frontend):** Se diseña completamente en archivos XAML (ej. `MainWindow.xaml`, `LoginWindow.xaml`).
+- **Lógica (Backend Local):** Código en los archivos de code-behind (ej. `MainWindow.xaml.cs`).
+- **Archivo Ejecutable/Proyecto Principal:** `LectorGlobalApp.csproj` (se compila a `Aloud.exe`).
 
 ## 🛠️ Tecnologías Utilizadas
-- **C# y Windows Forms:** Para el bucle de mensajes (Message Loop) necesario para escuchar los Global Hotkeys de Windows.
-- **PowerShell:** Para compilar el código C# "al vuelo" mediante `Add-Type` y ejecutarlo en memoria, evitando compilar un `.exe` permanentemente.
-- **VBScript:** Para ejecutar el PowerShell de forma totalmente invisible (sin ventana de consola).
+- **WPF (.NET 8):** Para la interfaz de usuario moderna.
+- **Supabase (C# SDK):** Backend en la nube para autenticación y base de datos de usuarios (`SupabaseManager.cs`).
+- **Local HTTP Listener (`LocalAuthServer.cs`):** Para interceptar la autenticación de OAuth (Google/Apple) redireccionando desde el navegador al puerto local `54321`.
+- **User32.dll:** Hotkeys globales nativos de Windows para interactuar con la app en segundo plano.
 
-## 🎮 Funcionamiento Clave (LectorGlobal.cs)
-- **Hotkeys Globales (User32.dll):**
-  - `Win + Ctrl + Z`: Leer el texto seleccionado / Pausar / Reanudar. (Si la tecla `Z` se mantiene presionada por ~800ms, emite un "beep" y **encola** el texto sin detener el actual).
-  - `Win + Ctrl + X`: Bajar la velocidad de lectura.
-  - `Win + Ctrl + A`: Subir la velocidad de lectura.
-- **Manejo del Portapapeles:**
-  1. Guarda el estado actual del portapapeles.
-  2. Simula `Ctrl+C` (`SendKeys.SendWait`) para copiar la selección.
-  3. Filtra emojis y caracteres extraños (usando Regex y chequeo de surrogates) que trabarían al motor de voz.
-  4. Restaura el texto original al portapapeles para no interrumpir el flujo de trabajo del usuario.
-- **Gestión de Voz (`SpeechSynthesizer`):** Intenta priorizar voces instaladas localmente llamadas "Raul" o "Pablo", y si no, "Sabina" o cualquier voz en español.
-
-## ⚠️ Consideraciones para Futuros Cambios
-1. **No rompas el Hotkey Hook:** La clase `DummyForm` oculta es necesaria para recibir los mensajes nativos de Windows (`WndProc`) y procesar los atajos. El thread necesita `Application.Run` para que los hooks sigan activos.
-2. **Paths Absolutos Harcodeados:** El script `RunLector.ps1` y `LectorGlobal.cs` usan paths absolutos harcodeados a la carpeta oculta de Gemini (ver arriba). Si decides traer el código a esta carpeta del proyecto, **debes actualizar rigurosamente las rutas** en `RunLector.ps1` (`$source = Get-Content ...`), en `LectorGlobal.cs` (`string logFile = ...`) y en `LectorTexto.vbs`.
-3. **Manejo Asíncrono de Eventos:** Ten cuidado con los bloqueos. Al cambiar de velocidad, el código cancela la lectura y la reinicia desde donde estaba. La lectura de hotkeys verifica si la tecla está presionada usando `GetAsyncKeyState`.
+## ⚠️ Consideraciones para Futuros Cambios (REGLAS OBLIGATORIAS)
+1. **Regla Crítica de Compilación:** Al ejecutar comandos como `dotnet build` o `dotnet run`, el archivo compilado `Aloud.exe` puede quedar bloqueado si la aplicación sigue en ejecución o colgada en segundo plano.
+   - 👉 **ACCIÓN OBLIGATORIA:** SIEMPRE debes ejecutar `taskkill /F /IM Aloud.exe` o `Stop-Process -Name "Aloud" -Force -ErrorAction SilentlyContinue` antes de realizar un `dotnet build`.
+2. **Offline-First (Estadísticas y Ajustes):** El usuario requiere que la app funcione sin conexión. Todos los cambios de estadísticas deben guardarse **inmediatamente** en el sistema de archivos (ej. `lector_stats.json`), e intentar sincronizarse con la nube en segundo plano solo si existe conexión (vía `SupabaseManager`).
+3. **No rompas el Hotkey Hook:** Cuidado con bloquear el `Dispatcher` o el Thread principal de WPF, ya que esto congelaría la escucha de atajos de teclado globales. Las tareas pesadas deben usar `async/await`.

@@ -1,0 +1,745 @@
+<Window x:Class="LectorGlobalApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:LectorGlobalApp"
+        Title="Aloud" Height="650" Width="950"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" Icon="logo_sin_fondo.png" Tag="Expanded">
+    
+    <Window.Resources>
+        <local:HotkeyToTokensConverter x:Key="HotkeyToTokensConverter" />
+        <!-- Colores Globales (Light Mode por Defecto) -->
+        <SolidColorBrush x:Key="WindowBg" Color="#F3F4F6"/>
+        <SolidColorBrush x:Key="SidebarBg" Color="#F9FAFB"/>
+        <SolidColorBrush x:Key="SidebarBorderBg" Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextMain" Color="#111827"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#6B7280"/>
+        <SolidColorBrush x:Key="AccentColor" Color="#4F46E5"/>
+        <SolidColorBrush x:Key="AccentHover" Color="#4338CA"/>
+        
+        <SolidColorBrush x:Key="SidebarActiveBg" Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="SidebarHoverBg" Color="#E5E7EB"/>
+        
+        <SolidColorBrush x:Key="HeroBg" Color="#111827"/>
+        <SolidColorBrush x:Key="HeroText" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="HeroTextMuted" Color="#9CA3AF"/>
+        
+        <SolidColorBrush x:Key="TrialBg" Color="#FDF4FF"/>
+        <SolidColorBrush x:Key="TrialBorderC" Color="#FBCFE8"/>
+        <SolidColorBrush x:Key="FeedbackBg" Color="#F3F4F6"/>
+        <SolidColorBrush x:Key="FeedbackText" Color="#111827"/>
+        <SolidColorBrush x:Key="WindowBorderBg" Color="#E5E7EB"/>
+
+        <!-- Estilos de Botones de Sidebar -->
+        <Style x:Key="SidebarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BgBorder" Background="{TemplateBinding Background}" CornerRadius="6" Margin="10,2">
+                            <StackPanel x:Name="IconPanel" Orientation="Horizontal" Margin="{TemplateBinding Padding}">
+                                <Path x:Name="BtnIcon" Data="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Uid}" 
+                                      Stroke="{TemplateBinding Foreground}" StrokeThickness="2" Fill="Transparent" 
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Stretch="Uniform" Width="20" Height="20" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BtnText" Text="{TemplateBinding Content}" Margin="15,0,0,0" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BgBorder" Property="Background" Value="{DynamicResource SidebarHoverBg}"/>
+                            </Trigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=Tag}" Value="Collapsed">
+                                <Setter TargetName="BtnText" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="IconPanel" Property="Margin" Value="0,10"/>
+                                <Setter TargetName="IconPanel" Property="HorizontalAlignment" Value="Center"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SidebarButtonActive" BasedOn="{StaticResource SidebarButton}" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SidebarActiveBg}"/>
+        </Style>
+
+        <!-- Botones Primarios -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BgBorder" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BgBorder" Property="Background" Value="{DynamicResource AccentHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="MainBorder" Background="{DynamicResource WindowBg}" CornerRadius="12" BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="1">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- SIDEBAR -->
+            <Border x:Name="SidebarBorder" Grid.Column="0" Width="230" Background="{DynamicResource SidebarBg}" CornerRadius="12,0,0,12" BorderBrush="{DynamicResource SidebarBorderBg}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Logo & Titulo -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,25,20,30">
+                        <Image Source="logo_sin_fondo.png" Width="24" Height="24" Margin="0,0,10,0"/>
+                        <TextBlock x:Name="TitleText" Text="{Binding AppTitle}" FontWeight="Bold" FontSize="18" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=Tag}" Value="Collapsed">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Border Background="#F3E8FF" CornerRadius="4" Padding="4,2" Margin="5,0,0,0" VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=Tag}" Value="Collapsed">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="PRO" FontSize="10" FontWeight="Bold" Foreground="#7E22CE"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Navegación -->
+                    <StackPanel Grid.Row="1" x:Name="SidebarNavPanel">
+                        <Button x:Name="BtnNavInicio" Content="{Binding MenuInicio}" Uid="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" Style="{DynamicResource SidebarButtonActive}" Click="NavButton_Click" Tag="PanelInicio"/>
+                        <Button x:Name="BtnNavVoces" Content="{Binding MenuVoces}" Uid="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v4 M8 23h8" Style="{StaticResource SidebarButton}" Click="NavButton_Click" Tag="PanelVoces"/>
+                        <Button x:Name="BtnNavAtajos" Content="{Binding MenuAtajos}" Uid="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z M6 10h2 M10 10h2 M14 10h2 M18 10h2 M6 14h12" Style="{StaticResource SidebarButton}" Click="NavButton_Click" Tag="PanelAtajos"/>
+                        <Button x:Name="BtnNavInsights" Content="{Binding MenuInsights}" Uid="M18 20V10 M12 20V4 M6 20V14" Style="{StaticResource SidebarButton}" Click="NavButton_Click" Tag="PanelInsights"/>
+                    </StackPanel>
+
+                    <!-- Trial / Ajustes Abajo -->
+                    <StackPanel Grid.Row="2" Margin="0,0,0,20">
+                        <Border x:Name="TrialBorder" Background="{DynamicResource TrialBg}" CornerRadius="8" Padding="15" Margin="15,0,15,15" BorderBrush="{DynamicResource TrialBorderC}" BorderThickness="1" Height="140" ClipToBounds="True">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=Tag}" Value="Collapsed">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="{Binding TrialTitle}" FontWeight="Bold" Foreground="#9D03FB" FontSize="13"/>
+                                <TextBlock Text="{Binding TrialSubtitle}" TextWrapping="Wrap" Foreground="#9D03FB" Opacity="0.8" FontSize="11" Margin="0,5,0,10"/>
+                                <Button Content="{Binding TrialButton}" Style="{StaticResource PrimaryButton}" Background="#9D03FB" Padding="10,8" Click="BtnTrial_Click"/>
+                            </StackPanel>
+                        </Border>
+                        <Button x:Name="BtnNavAjustes" Content="{Binding MenuAjustes}" Uid="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1h.09a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" Style="{StaticResource SidebarButton}" Click="NavButton_Click" Tag="PanelAjustes"/>
+                        <Button x:Name="BtnNavFeedback" Content="Feedback" Uid="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 17v.01 M12 13.5a1.5 1.5 0 0 1 1-1.5 2 2 0 1 0-2-2" Style="{StaticResource SidebarButton}" Click="NavButton_Click" Tag="PanelFeedback"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- MAIN CONTENT AREA -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="40"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Topbar -->
+                <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseDown">
+                    <Button x:Name="BtnToggleSidebar" Width="40" Height="40" Background="Transparent" BorderThickness="0" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" Click="BtnToggleSidebar_Click" Cursor="Hand" ToolTip="Mostrar/Ocultar Menú">
+                        <Path Data="M2,2 L14,2 C15.1,2 16,2.9 16,4 L16,12 C16,13.1 15.1,14 14,14 L2,14 C0.9,14 0,13.1 0,12 L0,4 C0,2.9 0.9,2 2,2 Z M6,2 L6,14" 
+                              Stroke="{DynamicResource TextMuted}" StrokeThickness="2" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
+                        <Button Content="—" Width="45" Height="40" Background="Transparent" Foreground="{DynamicResource TextMuted}" BorderThickness="0" Click="BtnMinimize_Click" FontSize="16" FontWeight="Bold"/>
+                        <Button x:Name="BtnMaximize" Content="☐" Width="45" Height="40" Background="Transparent" Foreground="{DynamicResource TextMuted}" BorderThickness="0" Click="BtnMaximize_Click" FontSize="16" FontWeight="Bold"/>
+                        <Button Content="✕" Width="45" Height="40" Background="Transparent" Foreground="#EF4444" BorderThickness="0" Click="BtnClose_Click" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Content Panels -->
+                <Grid Grid.Row="1" Margin="30,10,30,30">
+                    
+                    <!-- PANEL: INICIO -->
+                    <ScrollViewer x:Name="PanelInicio" VerticalScrollBarVisibility="Auto" Visibility="Visible">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Izquierda: Controles -->
+                                <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                                    <Border x:Name="StatusCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="0,0,0,20">
+                                        <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#10B981" Margin="0,0,10,0"/>
+                                            <TextBlock x:Name="StatusText" Text="{Binding StatusActive}" Foreground="{DynamicResource TextMain}" FontSize="15" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border x:Name="ControlsCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20">
+                                        <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                        <StackPanel>
+                                            <TextBlock x:Name="VoicesLabel" Text="{Binding LblVoice}" Foreground="{DynamicResource TextMuted}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                            <local:SearchableComboBox x:Name="CmbVoices" Margin="0,0,0,25" SelectionChanged="CmbVoices_SelectionChanged" SearchPlaceholder="Buscar voz..."/>
+
+                                            <TextBlock x:Name="SpeedLabel" Text="{Binding LblSpeed}" Foreground="{DynamicResource TextMuted}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="50"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Slider x:Name="SldSpeed" Minimum="-10" Maximum="10" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="SldSpeed_ValueChanged"/>
+                                                <TextBlock x:Name="TxtSpeedValue" Grid.Column="1" Text="x1.0" Foreground="{DynamicResource TextMain}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Derecha: Estadísticas -->
+                                <StackPanel Grid.Column="1" Margin="15,0,0,0">
+                                    <Border x:Name="StatsCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="0,0,0,20">
+                                        <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                        <StackPanel>
+                                            <TextBlock x:Name="StatWords" Text="427" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                            <TextBlock x:Name="StatWordsSub" Text="{Binding StatWordsSub}" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,15"/>
+                                            
+                                            <TextBlock x:Name="StatWpm" Text="202" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                            <TextBlock x:Name="StatWpmSub" Text="{Binding StatWpmSub}" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,15"/>
+                                            
+                                            <TextBlock x:Name="StatStreak" Text="1" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                            <TextBlock x:Name="StatStreakSub" Text="{Binding StatStreakSub}" FontSize="12" Foreground="{DynamicResource TextMuted}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- PANEL: VOCES -->
+                    <ScrollViewer x:Name="PanelVoces" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="{Binding TabVoicesTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,20"/>
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="25">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding LblLanguageSelect}" Foreground="{DynamicResource TextMuted}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                    <local:SearchableComboBox x:Name="CmbFilterLanguage" Margin="0,0,0,25" SelectionChanged="CmbFilterLanguage_SelectionChanged" SearchPlaceholder="Buscar idioma..."/>
+
+                                    <TextBlock Text="{Binding LblAvailableVoices}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                                    
+                                    <ItemsControl x:Name="VoicesList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource SidebarBorderBg}" BorderThickness="0,0,0,1" Margin="0,0,0,15" Padding="0,0,0,15">
+                                                    <Grid>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold"/>
+                                                            <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                            <Button Content="{Binding DataContext.BtnProbar, RelativeSource={RelativeSource AncestorType=Window}}" Click="BtnTestSpecificVoice_Click" Tag="{Binding Name}" Margin="0,0,10,0" Background="{DynamicResource SidebarBorderBg}" BorderThickness="0" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" Padding="15,8" Cursor="Hand">
+                                                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="15"/></Style></Button.Resources>
+                                                            </Button>
+                                                            <Button Content="{Binding DataContext.BtnSeleccionar, RelativeSource={RelativeSource AncestorType=Window}}" Click="BtnSelectSpecificVoice_Click" Tag="{Binding Name}" Background="#9D03FB" BorderThickness="0" Foreground="White" FontWeight="SemiBold" Padding="15,8" Cursor="Hand">
+                                                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="15"/></Style></Button.Resources>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- PANEL: ATAJOS -->
+                    <ScrollViewer x:Name="PanelAtajos" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="{Binding TabShortcutsTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,10"/>
+                            <TextBlock Text="{Binding LblAtajosDesc}" FontSize="14" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,25"/>
+
+                            <TextBlock Text="{Binding LblLecturaSubtitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                            
+                            <!-- Shortcut 1 -->
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="20" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding LblAtajo1Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}"/>
+                                        <TextBlock Text="{Binding LblAtajo1Desc}" FontSize="13" Foreground="{DynamicResource TextMuted}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource CardBg}" Padding="15,8" Margin="0,0,10,0" MinWidth="160">
+                                            <Grid>
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyZ, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" IsHitTestVisible="False" VerticalAlignment="Center" Margin="0,0,30,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="13"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBox x:Name="TxtHotkeyZ" Background="Transparent" Foreground="Transparent" CaretBrush="Transparent" BorderThickness="0" Cursor="Hand" IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" LostFocus="HotkeyTextBox_LostFocus" GotFocus="HotkeyTextBox_GotFocus" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0"/>
+                                                <TextBlock Text="✎" Foreground="{DynamicResource TextMain}" FontSize="14" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" IsHitTestVisible="False" />
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Shortcut 2 (Increase Speed) -->
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="20" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding LblAtajo3Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}"/>
+                                        <TextBlock Text="{Binding LblAtajo3Desc}" FontSize="13" Foreground="{DynamicResource TextMuted}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource CardBg}" Padding="15,8" Margin="0,0,10,0" MinWidth="160">
+                                            <Grid>
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyA, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" IsHitTestVisible="False" VerticalAlignment="Center" Margin="0,0,30,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="13"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBox x:Name="TxtHotkeyA" Background="Transparent" Foreground="Transparent" CaretBrush="Transparent" BorderThickness="0" Cursor="Hand" IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" LostFocus="HotkeyTextBox_LostFocus" GotFocus="HotkeyTextBox_GotFocus" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0"/>
+                                                <TextBlock Text="✎" Foreground="{DynamicResource TextMain}" FontSize="14" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" IsHitTestVisible="False" />
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Shortcut 3 (Decrease Speed) -->
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="20" Margin="0,0,0,25">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding LblAtajo2Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}"/>
+                                        <TextBlock Text="{Binding LblAtajo2Desc}" FontSize="13" Foreground="{DynamicResource TextMuted}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource CardBg}" Padding="15,8" Margin="0,0,10,0" MinWidth="160">
+                                            <Grid>
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyX, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" IsHitTestVisible="False" VerticalAlignment="Center" Margin="0,0,30,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="13"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBox x:Name="TxtHotkeyX" Background="Transparent" Foreground="Transparent" CaretBrush="Transparent" BorderThickness="0" Cursor="Hand" IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" LostFocus="HotkeyTextBox_LostFocus" GotFocus="HotkeyTextBox_GotFocus" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0"/>
+                                                <TextBlock Text="✎" Foreground="{DynamicResource TextMain}" FontSize="14" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" IsHitTestVisible="False" />
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{Binding LblDictadoSubtitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                            
+                            <!-- Shortcut 4 (Dictation) -->
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="20" Margin="0,0,0,25">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding LblAtajo4Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}"/>
+                                        <TextBlock Text="{Binding LblAtajo4Desc}" FontSize="13" Foreground="{DynamicResource TextMuted}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource CardBg}" Padding="15,8" Margin="0,0,10,0" MinWidth="160">
+                                            <Grid>
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyD, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" IsHitTestVisible="False" VerticalAlignment="Center" Margin="0,0,30,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="13"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBox x:Name="TxtHotkeyD" Background="Transparent" Foreground="Transparent" CaretBrush="Transparent" BorderThickness="0" Cursor="Hand" IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" LostFocus="HotkeyTextBox_LostFocus" GotFocus="HotkeyTextBox_GotFocus" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0"/>
+                                                <TextBlock Text="✎" Foreground="{DynamicResource TextMain}" FontSize="14" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" IsHitTestVisible="False" />
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Background="{DynamicResource SidebarBg}" CornerRadius="12" Padding="20" Margin="0,0,0,30" BorderBrush="{DynamicResource SidebarBorderBg}" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding LblAtajo5Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}"/>
+                                        <TextBlock Text="{Binding LblAtajo5Desc}" FontSize="13" Foreground="{DynamicResource TextMuted}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource CardBg}" Padding="15,8" Margin="0,0,10,0" MinWidth="160">
+                                            <Grid>
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyS, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" IsHitTestVisible="False" VerticalAlignment="Center" Margin="0,0,30,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="13"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBox x:Name="TxtHotkeyS" Background="Transparent" Foreground="Transparent" CaretBrush="Transparent" BorderThickness="0" Cursor="Hand" IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" LostFocus="HotkeyTextBox_LostFocus" GotFocus="HotkeyTextBox_GotFocus" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0"/>
+                                                <TextBlock Text="✎" Foreground="{DynamicResource TextMain}" FontSize="14" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" IsHitTestVisible="False" />
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Button x:Name="BtnResetHotkeys" Content="{Binding BtnResetHotkeys}" Click="BtnResetHotkeys_Click" Background="{DynamicResource SidebarBorderBg}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" Padding="20,10" BorderThickness="0" HorizontalAlignment="Center" Cursor="Hand">
+                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                            </Button>
+                            
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- PANEL: INSIGHTS -->
+                    <ScrollViewer x:Name="PanelInsights" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="{Binding TabInsightsTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,20"/>
+                            
+                            <!-- 1ra línea: Racha -->
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="25" Margin="0,0,0,20">
+                                <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding LblCurrentStreak, StringFormat='🔥 \{0\}'}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMain}" HorizontalAlignment="Left" Margin="0,0,0,15"/>
+                                    <TextBlock x:Name="TxtStreak" Text="0 días" FontSize="42" FontWeight="Bold" Foreground="#F59E0B" HorizontalAlignment="Center" Margin="0,10"/>
+                                    <TextBlock Text="Días consecutivos usando Lector o Dictado" FontSize="12" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 2da línea: Tiempo ahorrado y Activaciones -->
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Tiempo Ahorrado -->
+                                <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="0,0,10,0">
+                                    <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding LblTimeSaved, StringFormat='⏱️ \{0\}'}" FontSize="14" Foreground="{DynamicResource TextMuted}" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                                        <TextBlock x:Name="TxtTimeSaved" Text="0 min" FontSize="32" FontWeight="Bold" Foreground="#10B981"/>
+                                        <TextBlock Text="En lecturas rápidas" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Activaciones -->
+                                <Border Grid.Column="1" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="10,0,0,0">
+                                    <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding LblActivations, StringFormat='⚡ \{0\}'}" FontSize="14" Foreground="{DynamicResource TextMuted}" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                                        <TextBlock x:Name="TxtActivations" Text="0" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                        <TextBlock Text="Veces que activaste Lector o Dictado (Hoy)" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- 3ra línea: Palabras Lector -->
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="0,0,0,20">
+                                <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="📖 Lector de Texto" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Hoy" FontSize="12" Foreground="{DynamicResource TextMuted}"/>
+                                            <TextBlock x:Name="TxtWordsToday" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Total Histórico" FontSize="12" Foreground="{DynamicResource TextMuted}"/>
+                                            <TextBlock x:Name="TxtWordsTotal" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 4ta línea: Palabras Dictado -->
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="0,0,0,20">
+                                <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="🎙️ Dictado de Voz" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Hoy" FontSize="12" Foreground="{DynamicResource TextMuted}"/>
+                                            <TextBlock x:Name="TxtDictatedWordsToday" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Total Histórico" FontSize="12" Foreground="{DynamicResource TextMuted}"/>
+                                            <TextBlock x:Name="TxtDictatedWordsTotal" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- PANEL: AJUSTES -->
+                    <ScrollViewer x:Name="PanelAjustes" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <ScrollViewer.Resources>
+                            <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="CheckBox">
+                                            <Border x:Name="Border" Width="44" Height="24" CornerRadius="12" Background="#D1D5DB" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Ellipse x:Name="Knob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" Margin="3,0,0,0">
+                                                    <Ellipse.Effect><DropShadowEffect Color="Black" BlurRadius="4" ShadowDepth="1" Opacity="0.2"/></Ellipse.Effect>
+                                                </Ellipse>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter TargetName="Border" Property="Background" Value="#111827"/>
+                                                    <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
+                                                    <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ScrollViewer.Resources>
+                        <StackPanel Margin="0,0,20,0">
+                            <TextBlock Text="{Binding TabSettingsTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,30"/>
+                            
+                            <!-- SECCIÓN GENERAL -->
+                            <TextBlock Text="{Binding LblAppSettings}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="25" Margin="0,0,0,30">
+                                <StackPanel>
+                                    
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding LblLaunchAtLogin}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="15"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="ChkLaunchAtLogin" Style="{StaticResource ToggleSwitchStyle}" Checked="ChkLaunchAtLogin_Checked" Unchecked="ChkLaunchAtLogin_Unchecked"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="0,0,0,1" Margin="0,20,0,20"/>
+
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding LblAppLanguage}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="15"/>
+                                        </StackPanel>
+                                        <local:SearchableComboBox x:Name="CmbLanguage" HorizontalAlignment="Right" VerticalAlignment="Center" Width="150" SelectionChanged="CmbLanguage_SelectionChanged" SearchPlaceholder="Buscar..."/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource WindowBorderBg}" BorderThickness="0,0,0,1" Margin="0,20,0,20"/>
+                                    
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding LblDarkMode}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="15"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="ChkDarkMode" Style="{StaticResource ToggleSwitchStyle}" Checked="ChkDarkMode_Checked" Unchecked="ChkDarkMode_Unchecked"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- SECCIÓN CUENTA -->
+                            <TextBlock Text="{Binding LblAccount}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="25" Margin="0,0,0,30">
+                                <StackPanel>
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" x:Name="PanelLoggedOut">
+                                            <TextBlock Text="{Binding LblUserProfile}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="15"/>
+                                            <TextBlock Text="{Binding LblLoginSync}" Foreground="{DynamicResource TextMuted}" FontSize="13" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                        
+                                        <StackPanel x:Name="PanelLoggedIn" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                                            <Ellipse Width="40" Height="40" Margin="0,0,15,0">
+                                                <Ellipse.Fill>
+                                                    <ImageBrush x:Name="ImgAvatar" />
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock x:Name="TxtUserName" Text="User" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="15"/>
+                                                <TextBlock x:Name="TxtUserEmail" Text="email" Foreground="{DynamicResource TextMuted}" FontSize="13" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                            <Button x:Name="BtnLogout" Content="{Binding BtnLogout}" Click="BtnLogout_Click" Visibility="Collapsed" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="#EF4444" FontWeight="SemiBold" Padding="15,8" Margin="0,0,10,0"/>
+                                            <Button x:Name="BtnLogin" Content="{Binding BtnLogin}" Click="BtnLogin_Click" Cursor="Hand" Background="{DynamicResource WindowBg}" BorderThickness="0" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" Padding="15,8">
+                                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="15"/></Style></Button.Resources>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- SECCIÓN PLANES Y FACTURACIÓN -->
+                            <TextBlock Text="{Binding LblPlansBilling}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,15"/>
+                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="12" Padding="25" Margin="0,0,0,30">
+                                <StackPanel>
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding LblCurrentPlan}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="15"/>
+                                            <TextBlock Text="{Binding LblFreePlanDesc}" Foreground="{DynamicResource TextMuted}" FontSize="13" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                        <Button Content="{Binding BtnUpgradePro}" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#9D03FB" BorderThickness="0" Foreground="White" FontWeight="SemiBold" Padding="15,8">
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="15"/></Style></Button.Resources>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- PANEL: FEEDBACK -->
+                    <ScrollViewer x:Name="PanelFeedback" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Feedback" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,20"/>
+                            
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="25">
+                                <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="Describe el error o sugerencia:" FontSize="18" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                    <TextBox x:Name="TxtFeedback" TextWrapping="Wrap" AcceptsReturn="True" Height="120" Padding="15" FontSize="14"
+                                             Background="{DynamicResource WindowBg}" Foreground="{DynamicResource TextMain}" BorderThickness="0" Margin="0,0,0,20">
+                                        <TextBox.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></TextBox.Resources>
+                                    </TextBox>
+                                    
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                                        <Button x:Name="BtnCargarFoto" Content="Adjuntar foto" Background="{DynamicResource SidebarBorderBg}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" Padding="15,10" BorderThickness="0" Click="BtnCargarFoto_Click">
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                                        </Button>
+                                    </StackPanel>
+                                    
+                                    <WrapPanel x:Name="PanelPreviewImages" Margin="0,0,0,20" Visibility="Collapsed"/>
+                                    
+                                    <Button x:Name="BtnEnviarFeedbackAction" Content="Enviar" Foreground="White" FontWeight="Bold" Padding="25,12" BorderThickness="0" Background="#9D03FB" HorizontalAlignment="Center" Click="BtnEnviarFeedbackAction_Click">
+                                        <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                                    </Button>
+                                    <TextBlock x:Name="TxtFeedbackStatus" Text="" Foreground="#10B981" FontWeight="SemiBold" Margin="0,15,0,0" Visibility="Collapsed" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- DICTATION OVERLAY NOTIFICATION -->
+                    <Border x:Name="OverlayDictation" Background="#9D03FB" CornerRadius="20" Padding="20,10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Visibility="Collapsed">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#9D03FB" Opacity="0.5" BlurRadius="20" ShadowDepth="0"/>
+                        </Border.Effect>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🎙️" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="TxtDictationStatus" Text="{Binding StatusDictating}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

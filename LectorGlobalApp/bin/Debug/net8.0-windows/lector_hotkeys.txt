@@ -1,0 +1,5 @@
+Read=10,90
+Slower=10,67
+Faster=10,88
+Dictate=10,65
+ToggleDictate=10,83
