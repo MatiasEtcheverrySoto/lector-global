@@ -8,6 +8,9 @@ namespace LectorGlobalApp
     public class SupabaseManager
     {
         private const string SUPABASE_URL = "https://dmkytwayhuoizesibcun.supabase.co";
+        // IMPORTANTE (Auditoría): La clave 'anon' es pública por diseño en Supabase. 
+        // Es obligatorio tener activado RLS (Row Level Security) en todas las tablas 
+        // para garantizar la seguridad de los datos.
         private const string SUPABASE_KEY = "sb_publishable_TE4NFcSOCHwELdDIeB6IFQ_sqe466HQ";
 
         public static Supabase.Client Client { get; private set; }
@@ -25,13 +28,13 @@ namespace LectorGlobalApp
             }
         }
 
-        public static async Task<Session?> LoginAsync(string email, string password)
+        public static async Task<Session> LoginAsync(string email, string password)
         {
             if (Client == null) await InitializeAsync();
             return await Client.Auth.SignIn(email, password);
         }
 
-        public static async Task<Session?> SignUpAsync(string email, string password)
+        public static async Task<Session> SignUpAsync(string email, string password)
         {
             if (Client == null) await InitializeAsync();
             return await Client.Auth.SignUp(email, password);
@@ -45,7 +48,7 @@ namespace LectorGlobalApp
             }
         }
 
-        public static async Task<Session?> OAuthLoginAsync(string providerStr)
+        public static async Task<Session> OAuthLoginAsync(string providerStr)
         {
             if (Client == null) await InitializeAsync();
             try
@@ -101,6 +104,6 @@ namespace LectorGlobalApp
         }
         
         public static bool IsLoggedIn => Client?.Auth?.CurrentSession != null;
-        public static User? CurrentUser => Client?.Auth?.CurrentUser;
+        public static User CurrentUser => Client?.Auth?.CurrentUser;
     }
 }
