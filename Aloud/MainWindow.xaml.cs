@@ -1,6 +1,5 @@
 using System;
 using System.Speech.Synthesis;
-using System.Speech.Recognition;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
@@ -29,6 +28,10 @@ namespace LectorGlobalApp
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
+        [DllImport("user32.dll")]
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+        const uint KEYEVENTF_KEYUP = 0x0002;
 
         const int MOD_CTRL = 0x0002;
         const int MOD_SHIFT = 0x0004;
@@ -38,6 +41,9 @@ namespace LectorGlobalApp
         private SpeechSynthesizer synth;
         private IntPtr windowHandle;
         private HwndSource source;
+        private System.Windows.Forms.NotifyIcon trayIcon;
+        private RawKeyboardHook rawHook;
+        private bool forceExit = false;
 
         private string currentText = "";
         private Queue<string> playlist = new Queue<string>();
@@ -49,7 +55,6 @@ namespace LectorGlobalApp
         {
             InitializeComponent();
             this.DataContext = Strings.Instance;
-            InitSpeechRecognition();
             
             synth = new SpeechSynthesizer();
             synth.SpeakCompleted += Synth_SpeakCompleted;
@@ -65,63 +70,6 @@ namespace LectorGlobalApp
 
             AuthManager.OnAuthStateChanged += UpdateAuthUI;
             UpdateAuthUI();
-        }
-
-        private void InitSpeechRecognition(bool silent = false)
-        {
-            try
-            {
-                System.Speech.Recognition.RecognizerInfo ri = null;
-                bool hasSpanish = false;
-                foreach (var r in System.Speech.Recognition.SpeechRecognitionEngine.InstalledRecognizers())
-                {
-                    if (r.Culture.TwoLetterISOLanguageName == "es")
-                    {
-                        ri = r;
-                        hasSpanish = true;
-                        break;
-                    }
-                }
-                if (ri == null && System.Speech.Recognition.SpeechRecognitionEngine.InstalledRecognizers().Count > 0)
-                {
-                    ri = System.Speech.Recognition.SpeechRecognitionEngine.InstalledRecognizers()[0];
-                }
-
-                if (ri != null)
-                {
-                    recognizer = new System.Speech.Recognition.SpeechRecognitionEngine(ri.Id);
-                    recognizer.LoadGrammar(new System.Speech.Recognition.DictationGrammar());
-                    recognizer.SetInputToDefaultAudioDevice();
-                    recognizer.SpeechRecognized += (s, e) => {
-                        if (e.Result != null && e.Result.Confidence > 0.4f)
-                        {
-                            dictationBuilder.Append(e.Result.Text + " ");
-                        }
-                    };
-
-                    if (!hasSpanish && !silent)
-                    {
-                        this.Dispatcher.BeginInvoke(new Action(() => {
-                            System.Windows.MessageBox.Show("Atención: No se encontró el paquete de Reconocimiento de Voz en Español instalado en Windows.\n\nEl dictado utilizará el idioma predeterminado de tu sistema (" + ri.Culture.NativeName + "), lo cual puede causar que no te entienda si hablas en español.\n\nPara solucionarlo, ve a 'Configuración de Windows > Hora e idioma > Voz' y añade el paquete de voz en Español.", "Lector Global - Dictado por Voz", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        }));
-                    }
-                }
-                else if (!silent)
-                {
-                    this.Dispatcher.BeginInvoke(new Action(() => {
-                        System.Windows.MessageBox.Show("Atención: No se encontró ningún motor de Reconocimiento de Voz instalado en Windows. La función de dictado no funcionará.", "Lector Global - Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }));
-                }
-            }
-            catch (Exception ex)
-            {
-                if (!silent)
-                {
-                    this.Dispatcher.BeginInvoke(new Action(() => {
-                        System.Windows.MessageBox.Show("Error al inicializar el dictado por voz:\n" + ex.Message, "Lector Global - Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }));
-                }
-            }
         }
 
         private void CheckRegistryConfig()
@@ -226,26 +174,24 @@ namespace LectorGlobalApp
             base.OnSourceInitialized(e);
             windowHandle = new WindowInteropHelper(this).Handle;
             source = HwndSource.FromHwnd(windowHandle);
-            source.AddHook(HwndHook);
 
             LoadHotkeys();
 
-            RegisterHotKey(windowHandle, 1, hkZ_Mod, hkZ_Key);
-            RegisterHotKey(windowHandle, 2, hkX_Mod, hkX_Key);
-            RegisterHotKey(windowHandle, 3, hkA_Mod, hkA_Key);
-            RegisterHotKey(windowHandle, 4, hkD_Mod, hkD_Key);
-            RegisterHotKey(windowHandle, 5, hkS_Mod, hkS_Key);
-        }
-
-        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if (msg == WM_HOTKEY)
-            {
-                int id = wParam.ToInt32();
-                HandleHotkey(id);
-                handled = true;
-            }
-            return IntPtr.Zero;
+            rawHook = new RawKeyboardHook();
+            rawHook.OnPhysicalKeyPressed += (vkCode) => {
+                int modifiers = 0;
+                if (rawHook.CtrlDown) modifiers |= MOD_CTRL;
+                if (rawHook.WinDown) modifiers |= MOD_WIN;
+                if (rawHook.ShiftDown) modifiers |= MOD_SHIFT;
+                if (rawHook.AltDown) modifiers |= 1; // 1 = MOD_ALT
+                
+                if (vkCode == hkZ_Key && modifiers == hkZ_Mod) { Dispatcher.InvokeAsync(() => HandleHotkey(1)); return true; }
+                if (vkCode == hkX_Key && modifiers == hkX_Mod) { Dispatcher.InvokeAsync(() => HandleHotkey(2)); return true; }
+                if (vkCode == hkA_Key && modifiers == hkA_Mod) { Dispatcher.InvokeAsync(() => HandleHotkey(3)); return true; }
+                if (vkCode == hkD_Key && modifiers == hkD_Mod) { Dispatcher.InvokeAsync(() => HandleHotkey(4)); return true; }
+                if (vkCode == hkS_Key && modifiers == hkS_Mod) { Dispatcher.InvokeAsync(() => HandleHotkey(5)); return true; }
+                return false;
+            };
         }
 
         private void Synth_SpeakCompleted(object sender, SpeakCompletedEventArgs e)
@@ -320,15 +266,17 @@ namespace LectorGlobalApp
                         var dummyTask = Task.Run(() => System.Console.Beep(1200, 100));
                     }
 
-                    while ((GetAsyncKeyState(0x11) & 0x8000) != 0 || // Ctrl
-                           (GetAsyncKeyState(0x12) & 0x8000) != 0 || // Alt
-                           (GetAsyncKeyState(0x10) & 0x8000) != 0 || // Shift
-                           (GetAsyncKeyState(0x5B) & 0x8000) != 0 || // LWin
-                           (GetAsyncKeyState(0x5C) & 0x8000) != 0 || // RWin
-                           (GetAsyncKeyState(hkZ_Key) & 0x8000) != 0)
-                    {
-                        await Task.Delay(50);
-                    }
+                    bool ctrlDown = (GetAsyncKeyState(0x11) & 0x8000) != 0;
+                    bool altDown = (GetAsyncKeyState(0x12) & 0x8000) != 0;
+                    bool shiftDown = (GetAsyncKeyState(0x10) & 0x8000) != 0;
+                    bool lWinDown = (GetAsyncKeyState(0x5B) & 0x8000) != 0;
+                    bool rWinDown = (GetAsyncKeyState(0x5C) & 0x8000) != 0;
+
+                    if (ctrlDown) keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    if (altDown) keybd_event(0x12, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    if (shiftDown) keybd_event(0x10, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    if (lWinDown) keybd_event(0x5B, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    if (rWinDown) keybd_event(0x5C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
 
                     string backup = await SafeGetClipboardTextAsync();
                     await SafeClearClipboardAsync();
@@ -388,118 +336,25 @@ namespace LectorGlobalApp
                     if (synth.Rate < 10) { synth.Rate++; SldSpeed.Value = synth.Rate; }
                     await RestartCurrentPlaybackAsync();
                 }
-                else if (id == 4) // Dictation
+                else if (id == 4 || id == 5) // Dictado (Nativo Win+H)
                 {
-                    if (recognizer == null) InitSpeechRecognition(true);
-                    if (recognizer == null)
-                    {
-                        var dummyTask = Task.Run(() => System.Console.Beep(400, 150));
-                        return; // Still no engine, fail with a low beep
-                    }
+                    // Liberar modificadores temporalmente para no interferir
+                    keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Ctrl
+                    keybd_event(0x12, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Alt
+                    keybd_event(0x10, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Shift
+                    keybd_event(0x5B, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // LWin
+                    keybd_event(0x5C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // RWin
 
-                    this.Dispatcher.Invoke(() => {
-                        OverlayDictation.Visibility = Visibility.Visible;
-                    });
-                    
-                    var startBeep = Task.Run(() => System.Console.Beep(1000, 100));
-
-                    dictationBuilder.Clear();
-                    try { recognizer?.RecognizeAsyncCancel(); } catch { }
                     await Task.Delay(50);
-                    try { recognizer?.RecognizeAsync(RecognizeMode.Multiple); } catch { }
 
-                    while ((GetAsyncKeyState(hkD_Key) & 0x8000) != 0 ||
-                           (GetAsyncKeyState(0x11) & 0x8000) != 0 || // Ctrl
-                           (GetAsyncKeyState(0x12) & 0x8000) != 0 || // Alt
-                           (GetAsyncKeyState(0x10) & 0x8000) != 0 || // Shift
-                           (GetAsyncKeyState(0x5B) & 0x8000) != 0 || // LWin
-                           (GetAsyncKeyState(0x5C) & 0x8000) != 0)   // RWin
-                    {
-                        await Task.Delay(50);
-                    }
+                    // Enviar Win+H
+                    keybd_event(0x5B, 0, 0, UIntPtr.Zero); // Win down
+                    keybd_event(0x48, 0, 0, UIntPtr.Zero); // H down
+                    keybd_event(0x48, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // H up
+                    keybd_event(0x5B, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Win up
 
-                    try { recognizer?.RecognizeAsyncStop(); } catch { }
-                    
-                    var stopBeep = Task.Run(() => System.Console.Beep(800, 100));
-
-                    await Task.Delay(1000); // Wait for final transcription
-
-                    this.Dispatcher.Invoke(() => {
-                        OverlayDictation.Visibility = Visibility.Collapsed;
-                    });
-
-                    string transcribed = dictationBuilder.ToString().Trim();
-                    if (!string.IsNullOrEmpty(transcribed))
-                    {
-                        int wordCount = transcribed.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-                        UpdateStatsOnDictation(wordCount);
-                        string backup = await SafeGetClipboardTextAsync();
-                        await SafeClearClipboardAsync();
-                        await SafeSetClipboardTextAsync(transcribed + " ");
-                        System.Windows.Forms.SendKeys.SendWait("^{v}");
-                        await Task.Delay(200);
-                        if (backup != null) await SafeSetClipboardTextAsync(backup);
-                        else await SafeClearClipboardAsync();
-                    }
-                }
-                else if (id == 5) // Toggle Dictation
-                {
-                    if (recognizer == null) InitSpeechRecognition(true);
-                    if (recognizer == null)
-                    {
-                        var dummyTask = Task.Run(() => System.Console.Beep(400, 150));
-                        return; // Still no engine, fail with a low beep
-                    }
-
-                    if (!isDictating)
-                    {
-                        isDictating = true;
-                        this.Dispatcher.Invoke(() => {
-                            OverlayDictation.Visibility = Visibility.Visible;
-                        });
-                        var startBeep = Task.Run(() => System.Console.Beep(1000, 100));
-                        dictationBuilder.Clear();
-                        try { recognizer?.RecognizeAsyncCancel(); } catch { }
-                        await Task.Delay(50);
-                        try { recognizer?.RecognizeAsync(RecognizeMode.Multiple); } catch { }
-                    }
-                    else
-                    {
-                        isDictating = false;
-                        try { recognizer?.RecognizeAsyncStop(); } catch { }
-                        var stopBeep = Task.Run(() => System.Console.Beep(800, 100));
-
-                        await Task.Delay(1000); // Wait for final transcription
-
-                        this.Dispatcher.Invoke(() => {
-                            OverlayDictation.Visibility = Visibility.Collapsed;
-                        });
-
-                        string transcribed = dictationBuilder.ToString().Trim();
-                        if (!string.IsNullOrEmpty(transcribed))
-                        {
-                            int wordCount = transcribed.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-                            UpdateStatsOnDictation(wordCount);
-                            
-                            while ((GetAsyncKeyState(hkS_Key) & 0x8000) != 0 ||
-                                   (GetAsyncKeyState(0x11) & 0x8000) != 0 || // Ctrl
-                                   (GetAsyncKeyState(0x12) & 0x8000) != 0 || // Alt
-                                   (GetAsyncKeyState(0x10) & 0x8000) != 0 || // Shift
-                                   (GetAsyncKeyState(0x5B) & 0x8000) != 0 || // LWin
-                                   (GetAsyncKeyState(0x5C) & 0x8000) != 0)   // RWin
-                            {
-                                await Task.Delay(50);
-                            }
-
-                            string backup = await SafeGetClipboardTextAsync();
-                            await SafeClearClipboardAsync();
-                            await SafeSetClipboardTextAsync(transcribed + " ");
-                            System.Windows.Forms.SendKeys.SendWait("^{v}");
-                            await Task.Delay(200);
-                            if (backup != null) await SafeSetClipboardTextAsync(backup);
-                            else await SafeClearClipboardAsync();
-                        }
-                    }
+                    // Registrar 1 minuto de dictado simulado para las estadísticas
+                    UpdateStatsOnDictation(15);
                 }
             }
             finally
@@ -1049,11 +904,6 @@ namespace LectorGlobalApp
         private int hkD_Mod = MOD_CTRL | MOD_WIN; private int hkD_Key = (int)System.Windows.Forms.Keys.U;
         private int hkS_Mod = MOD_CTRL | MOD_WIN; private int hkS_Key = (int)System.Windows.Forms.Keys.I;
 
-        private bool isDictating = false;
-
-        private SpeechRecognitionEngine recognizer;
-        private StringBuilder dictationBuilder = new StringBuilder();
-
         private void LoadHotkeys()
         {
             string file = System.IO.Path.Combine(Environment.CurrentDirectory, "lector_hotkeys.txt");
@@ -1184,11 +1034,7 @@ namespace LectorGlobalApp
             string content = $"Read={hkZ_Mod},{hkZ_Key}\nSlower={hkX_Mod},{hkX_Key}\nFaster={hkA_Mod},{hkA_Key}\nDictate={hkD_Mod},{hkD_Key}\nToggleDictate={hkS_Mod},{hkS_Key}";
             System.IO.File.WriteAllText(System.IO.Path.Combine(Environment.CurrentDirectory, "lector_hotkeys.txt"), content);
             
-            UnregisterHotKey(windowHandle, 1);
-            UnregisterHotKey(windowHandle, 2);
-            UnregisterHotKey(windowHandle, 3);
-            UnregisterHotKey(windowHandle, 4);
-            UnregisterHotKey(windowHandle, 5);
+            for (int i = 1; i <= 5; i++) UnregisterHotKey(windowHandle, i);
             RegisterHotKey(windowHandle, 1, hkZ_Mod, hkZ_Key);
             RegisterHotKey(windowHandle, 2, hkX_Mod, hkX_Key);
             RegisterHotKey(windowHandle, 3, hkA_Mod, hkA_Key);
@@ -1327,13 +1173,6 @@ namespace LectorGlobalApp
             
             if (TxtDictatedWordsTotal != null) TxtDictatedWordsTotal.Text = _stats.DictatedWordsTotal.ToString("N0");
             if (TxtDictatedWordsToday != null) TxtDictatedWordsToday.Text = _stats.DictatedWordsToday.ToString("N0");
-
-            if (StatWords != null) StatWords.Text = _stats.WordsToday.ToString("N0");
-            if (StatWpm != null) {
-                double currentWpm = 200.0 + (synth.Rate * 20.0);
-                StatWpm.Text = currentWpm.ToString("N0");
-            }
-            if (StatStreak != null) StatStreak.Text = _stats.StreakDays.ToString("N0");
         }
 
         private void CheckRegistryStartup()
@@ -1474,13 +1313,16 @@ namespace LectorGlobalApp
 
         protected override void OnClosed(EventArgs e)
         {
-            source?.RemoveHook(HwndHook);
-            UnregisterHotKey(windowHandle, 1);
-            UnregisterHotKey(windowHandle, 2);
-            UnregisterHotKey(windowHandle, 3);
-            UnregisterHotKey(windowHandle, 4);
-            synth?.Dispose();
-            recognizer?.Dispose();
+            rawHook?.Dispose();
+            
+            if (synth != null)
+            {
+                synth.Dispose();
+            }
+            if (trayIcon != null)
+            {
+                trayIcon.Dispose();
+            }
             base.OnClosed(e);
         }
     }
