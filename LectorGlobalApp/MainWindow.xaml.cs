@@ -233,43 +233,43 @@ namespace LectorGlobalApp
             }
         }
 
-        private void RestartCurrentPlayback()
+        private async Task RestartCurrentPlaybackAsync()
         {
             if (!string.IsNullOrWhiteSpace(currentText) && (synth.State == SynthesizerState.Speaking || synth.State == SynthesizerState.Paused))
             {
                 bool wasPaused = (synth.State == SynthesizerState.Paused);
                 synth.SpeakAsyncCancelAll();
-                Thread.Sleep(50);
+                await Task.Delay(50);
                 if (wasPaused) synth.Resume();
                 synth.SpeakAsync(currentText);
             }
         }
 
-        private string SafeGetClipboardText()
+        private async Task<string> SafeGetClipboardTextAsync()
         {
             for (int i = 0; i < 5; i++)
             {
                 try { if (System.Windows.Clipboard.ContainsText()) return System.Windows.Clipboard.GetText(); return null; }
-                catch { Thread.Sleep(50); }
+                catch { await Task.Delay(50); }
             }
             return null;
         }
 
-        private void SafeSetClipboardText(string text)
+        private async Task SafeSetClipboardTextAsync(string text)
         {
             for (int i = 0; i < 5; i++)
             {
                 try { System.Windows.Clipboard.SetText(text); return; }
-                catch { Thread.Sleep(50); }
+                catch { await Task.Delay(50); }
             }
         }
 
-        private void SafeClearClipboard()
+        private async Task SafeClearClipboardAsync()
         {
             for (int i = 0; i < 5; i++)
             {
                 try { System.Windows.Clipboard.Clear(); return; }
-                catch { Thread.Sleep(50); }
+                catch { await Task.Delay(50); }
             }
         }
 
@@ -306,21 +306,21 @@ namespace LectorGlobalApp
                         await Task.Delay(50);
                     }
 
-                    string backup = SafeGetClipboardText();
-                    SafeClearClipboard();
+                    string backup = await SafeGetClipboardTextAsync();
+                    await SafeClearClipboardAsync();
                     
                     System.Windows.Forms.SendKeys.SendWait("^{c}");
-                    Thread.Sleep(200);
+                    await Task.Delay(200);
                     
-                    string newText = SafeGetClipboardText() ?? "";
+                    string newText = await SafeGetClipboardTextAsync() ?? "";
                     if (!string.IsNullOrEmpty(newText))
                     {
                         newText = new string(newText.Where(c => !char.IsSurrogate(c)).ToArray());
                         newText = System.Text.RegularExpressions.Regex.Replace(newText, @"[^\p{L}\p{Nd}\p{P}\p{Z}\s]", "");
                     }
                     
-                    if (backup != null) SafeSetClipboardText(backup);
-                    else SafeClearClipboard();
+                    if (backup != null) await SafeSetClipboardTextAsync(backup);
+                    else await SafeClearClipboardAsync();
                     
                     if (synth.State == SynthesizerState.Speaking || synth.State == SynthesizerState.Paused)
                     {
@@ -357,12 +357,12 @@ namespace LectorGlobalApp
                 else if (id == 2) // Bajar velocidad
                 {
                     if (synth.Rate > -10) { synth.Rate--; SldSpeed.Value = synth.Rate; }
-                    RestartCurrentPlayback();
+                    await RestartCurrentPlaybackAsync();
                 }
                 else if (id == 3) // Subir velocidad
                 {
                     if (synth.Rate < 10) { synth.Rate++; SldSpeed.Value = synth.Rate; }
-                    RestartCurrentPlayback();
+                    await RestartCurrentPlaybackAsync();
                 }
                 else if (id == 4) // Dictation
                 {
@@ -396,13 +396,13 @@ namespace LectorGlobalApp
                     {
                         int wordCount = transcribed.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
                         UpdateStatsOnDictation(wordCount);
-                        string backup = SafeGetClipboardText();
-                        SafeClearClipboard();
-                        SafeSetClipboardText(transcribed + " ");
+                        string backup = await SafeGetClipboardTextAsync();
+                        await SafeClearClipboardAsync();
+                        await SafeSetClipboardTextAsync(transcribed + " ");
                         System.Windows.Forms.SendKeys.SendWait("^{v}");
-                        Thread.Sleep(200);
-                        if (backup != null) SafeSetClipboardText(backup);
-                        else SafeClearClipboard();
+                        await Task.Delay(200);
+                        if (backup != null) await SafeSetClipboardTextAsync(backup);
+                        else await SafeClearClipboardAsync();
                     }
                 }
                 else if (id == 5) // Toggle Dictation
@@ -432,13 +432,13 @@ namespace LectorGlobalApp
                         {
                             int wordCount = transcribed.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
                             UpdateStatsOnDictation(wordCount);
-                            string backup = SafeGetClipboardText();
-                            SafeClearClipboard();
-                            SafeSetClipboardText(transcribed + " ");
+                            string backup = await SafeGetClipboardTextAsync();
+                            await SafeClearClipboardAsync();
+                            await SafeSetClipboardTextAsync(transcribed + " ");
                             System.Windows.Forms.SendKeys.SendWait("^{v}");
-                            Thread.Sleep(200);
-                            if (backup != null) SafeSetClipboardText(backup);
-                            else SafeClearClipboard();
+                            await Task.Delay(200);
+                            if (backup != null) await SafeSetClipboardTextAsync(backup);
+                            else await SafeClearClipboardAsync();
                         }
                     }
                 }
@@ -449,11 +449,23 @@ namespace LectorGlobalApp
             }
         }
 
-        public class VoiceDisplayItem
+        public class VoiceDisplayItem : System.ComponentModel.INotifyPropertyChanged
         {
             public string Name { get; set; }
             public string Description { get; set; }
             public string CultureName { get; set; }
+
+            private bool _isSelected;
+            public bool IsSelected
+            {
+                get { return _isSelected; }
+                set
+                {
+                    _isSelected = value;
+                    PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs("IsSelected"));
+                }
+            }
+            public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         }
 
         private List<VoiceDisplayItem> allVoices = new List<VoiceDisplayItem>();
@@ -519,28 +531,33 @@ namespace LectorGlobalApp
             SaveToRegistry("VoiceLang", selectedCulture);
         }
 
+        private SpeechSynthesizer _testSynth;
+
         private void BtnTestSpecificVoice_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.Button btn && btn.Tag is string voiceName)
             {
-                Task.Run(() => {
-                    using (var tempSynth = new SpeechSynthesizer())
-                    {
-                        int currentRate = 0;
-                        Dispatcher.Invoke(() => currentRate = synth.Rate);
-                        tempSynth.Rate = currentRate;
-                        tempSynth.SelectVoice(voiceName);
-                        tempSynth.Speak("Esta es una prueba de cómo suena esta voz.");
-                    }
-                });
+                // Parar cualquier lectura principal actual
+                synth.SpeakAsyncCancelAll();
+
+                // Parar y limpiar la prueba anterior
+                if (_testSynth != null)
+                {
+                    _testSynth.SpeakAsyncCancelAll();
+                    _testSynth.Dispose();
+                }
+
+                _testSynth = new SpeechSynthesizer();
+                _testSynth.Rate = synth.Rate;
+                _testSynth.SelectVoice(voiceName);
+                _testSynth.SpeakAsync("Esta es una prueba de cómo suena esta voz.");
             }
         }
 
-        private void BtnSelectSpecificVoice_Click(object sender, RoutedEventArgs e)
+        private void VoiceRadioButton_Checked(object sender, RoutedEventArgs e)
         {
-            if (sender is System.Windows.Controls.Button btn && btn.Tag is string voiceName)
+            if (sender is System.Windows.Controls.RadioButton rb && rb.Tag is string voiceName)
             {
-                synth.SelectVoice(voiceName);
                 if (CmbVoices.ItemsSource != null)
                 {
                     foreach (string item in CmbVoices.ItemsSource)
@@ -552,8 +569,6 @@ namespace LectorGlobalApp
                         }
                     }
                 }
-                
-                System.Windows.MessageBox.Show("Voz seleccionada correctamente: " + voiceName, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -649,6 +664,14 @@ namespace LectorGlobalApp
                 string voiceName = CmbVoices.SelectedItem.ToString();
                 synth.SelectVoice(voiceName);
                 SaveToRegistry("VoiceName", voiceName);
+                
+                if (allVoices != null)
+                {
+                    foreach (var v in allVoices)
+                    {
+                        v.IsSelected = (v.Name == voiceName);
+                    }
+                }
             }
         }
 
@@ -776,13 +799,12 @@ namespace LectorGlobalApp
             if (sender is System.Windows.Controls.Button btn && btn.Tag != null)
             {
                 // Reset all button styles
-                foreach (var child in SidebarNavPanel.Children)
-                {
-                    if (child is System.Windows.Controls.Button sidebarBtn)
-                    {
-                        sidebarBtn.Style = (Style)FindResource("SidebarButton");
-                    }
-                }
+                BtnNavInicio.Style = (Style)FindResource("SidebarButton");
+                BtnNavVoces.Style = (Style)FindResource("SidebarButton");
+                BtnNavAtajos.Style = (Style)FindResource("SidebarButton");
+                BtnNavInsights.Style = (Style)FindResource("SidebarButton");
+                BtnNavAjustes.Style = (Style)FindResource("SidebarButton");
+                BtnNavFeedback.Style = (Style)FindResource("SidebarButton");
                 
                 // Set active style for clicked
                 btn.Style = (Style)FindResource("SidebarButtonActive");
@@ -1228,6 +1250,8 @@ namespace LectorGlobalApp
                 System.Windows.Application.Current.Resources["TextMain"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F9FAFB"));
                 System.Windows.Application.Current.Resources["TextMuted"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#9CA3AF"));
                 System.Windows.Application.Current.Resources["WindowBorderBg"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#2A2A2A"));
+                System.Windows.Application.Current.Resources["TrialBg"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("Transparent"));
+                System.Windows.Application.Current.Resources["TrialBorderC"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#4B5563"));
                 
                 this.Resources["WindowBg"] = System.Windows.Application.Current.Resources["WindowBg"];
                 this.Resources["SidebarBg"] = System.Windows.Application.Current.Resources["SidebarBg"];
@@ -1238,6 +1262,8 @@ namespace LectorGlobalApp
                 this.Resources["TextMain"] = System.Windows.Application.Current.Resources["TextMain"];
                 this.Resources["TextMuted"] = System.Windows.Application.Current.Resources["TextMuted"];
                 this.Resources["WindowBorderBg"] = System.Windows.Application.Current.Resources["WindowBorderBg"];
+                this.Resources["TrialBg"] = System.Windows.Application.Current.Resources["TrialBg"];
+                this.Resources["TrialBorderC"] = System.Windows.Application.Current.Resources["TrialBorderC"];
             }
             else
             {
@@ -1250,6 +1276,8 @@ namespace LectorGlobalApp
                 System.Windows.Application.Current.Resources["TextMain"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#111827"));
                 System.Windows.Application.Current.Resources["TextMuted"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#6B7280"));
                 System.Windows.Application.Current.Resources["WindowBorderBg"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E5E7EB"));
+                System.Windows.Application.Current.Resources["TrialBg"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FDF4FF"));
+                System.Windows.Application.Current.Resources["TrialBorderC"] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FBCFE8"));
 
                 this.Resources["WindowBg"] = System.Windows.Application.Current.Resources["WindowBg"];
                 this.Resources["SidebarBg"] = System.Windows.Application.Current.Resources["SidebarBg"];
@@ -1260,6 +1288,8 @@ namespace LectorGlobalApp
                 this.Resources["TextMain"] = System.Windows.Application.Current.Resources["TextMain"];
                 this.Resources["TextMuted"] = System.Windows.Application.Current.Resources["TextMuted"];
                 this.Resources["WindowBorderBg"] = System.Windows.Application.Current.Resources["WindowBorderBg"];
+                this.Resources["TrialBg"] = System.Windows.Application.Current.Resources["TrialBg"];
+                this.Resources["TrialBorderC"] = System.Windows.Application.Current.Resources["TrialBorderC"];
             }
         }
 

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 
@@ -26,7 +26,7 @@ namespace LectorGlobalApp
             {
                 if (_currentTrialState == TrialState.NotStarted)
                 {
-                    TrialTitle = "Puedes acceder a la prueba gratuita por 10 días";
+                    TrialTitle = "Accede a la prueba gratuita";
                     TrialSubtitle = "Disfruta de voces IA ilimitadas.";
                     TrialButton = "Iniciar Prueba";
                 }
@@ -81,7 +81,7 @@ namespace LectorGlobalApp
             }
         }
 
-        private string _trialTitle = "Puedes acceder a la prueba gratuita por 10 días";
+        private string _trialTitle = "Accede a la prueba gratuita";
         public string TrialTitle 
         { 
             get => _trialTitle; 
