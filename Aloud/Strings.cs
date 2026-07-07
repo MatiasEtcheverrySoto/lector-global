@@ -155,6 +155,13 @@ namespace LectorGlobalApp
                 { "ShortcutA", "Ctrl + Win + A : Más Rápido" },
                 { "TabVoicesTitle", "Idiomas y Voces" },
                 { "TabInsightsTitle", "Estadísticas de Uso" },
+                { "LblStatusReady", "Aloud está listo" },
+                { "LblSelectText1", "Selecciona cualquier texto y presiona " },
+                { "LblSelectText2", " para escucharlo." },
+                { "LblHoldDictation1", "Mantén presionado " },
+                { "LblHoldDictation2", " y comienza a hablar para dictar." },
+                { "LblMainVoice", "Voz Principal" },
+                { "LblReadSpeed", "Velocidad de Lectura" },
                 { "LblInicioTitle", "Reproducción Inteligente" },
                 { "LblInicioDesc", "Selecciona cualquier texto en Windows y presiona tu atajo de teclado para escucharlo al instante." },
                 { "LblLanguageSelect", "Idioma" },
@@ -176,9 +183,16 @@ namespace LectorGlobalApp
                 { "LblByListeningFast", "Por escuchar rápido" },
                 { "LblActivations", "Activaciones" },
                 { "LblReadingsStarted", "Lecturas iniciadas hoy" },
-                { "LblCurrentStreak", "Racha Actual" },
+                { "LblCurrentStreak", "Racha" },
+                { "LblStreakDesc", "Días consecutivos usando Aloud" },
                 { "LblKeepUsing", "¡Sigue usando Aloud cada día!" },
                 { "LblReadingHistory", "Historial de Lectura" },
+                { "LblTimeSavedDesc", "En lecturas rápidas y dictados" },
+                { "LblActivationsDesc", "Veces que activaste Aloud" },
+                { "LblReadWords", "Palabras Leídas" },
+                { "LblDictatedWords", "Palabras Dictadas" },
+                { "LblToday", "Hoy" },
+                { "LblHistoricalTotal", "Total Histórico" },
                 { "LblAppSettings", "Ajustes de la aplicación" },
                 { "LblLaunchAtLogin", "Iniciar la app al arrancar" },
                 { "LblAppLanguage", "Idioma de la Interfaz" },
@@ -265,9 +279,16 @@ namespace LectorGlobalApp
                 { "LblAppLanguage", "App Language" },
                 { "LblLaunchAtLogin", "Launch app at login" },
                 { "LblAppSettings", "App Settings" },
-                { "LblReadingHistory", "Reading History" },
+                { "LblCurrentStreak", "Streak" },
+                { "LblStreakDesc", "Consecutive days using Aloud" },
                 { "LblKeepUsing", "Keep using Aloud every day!" },
-                { "LblCurrentStreak", "Current Streak" },
+                { "LblReadingHistory", "Reading History" },
+                { "LblTimeSavedDesc", "In fast readings and dictations" },
+                { "LblActivationsDesc", "Times you activated Aloud" },
+                { "LblReadWords", "Read Words" },
+                { "LblDictatedWords", "Dictated Words" },
+                { "LblToday", "Today" },
+                { "LblHistoricalTotal", "Historical Total" },
                 { "LblReadingsStarted", "Readings started today" },
                 { "LblActivations", "Activations" },
                 { "LblByListeningFast", "By listening faster" },
@@ -286,9 +307,16 @@ namespace LectorGlobalApp
                 { "BtnSeleccionar", "Select" },
                 { "BtnProbar", "Test" },
                 { "LblAvailableVoices", "Available Voices" },
-                { "LblLanguageSelect", "Language" },
-                { "LblInicioDesc", "Select any text in Windows and press your hotkey to hear it instantly." },
+                { "LblStatusReady", "Aloud is ready" },
+                { "LblSelectText1", "Select any text and press " },
+                { "LblSelectText2", " to listen to it." },
+                { "LblHoldDictation1", "Hold " },
+                { "LblHoldDictation2", " and start speaking to dictate." },
+                { "LblMainVoice", "Main Voice" },
+                { "LblReadSpeed", "Reading Speed" },
                 { "LblInicioTitle", "Smart Playback" },
+                { "LblInicioDesc", "Select any text in Windows and press your keyboard shortcut to listen instantly." },
+                { "LblLanguageSelect", "Language" },
                 { "LblDictadoSubtitle", "Dictation" },
                 { "LblAtajo4Title", "Touch word" },
                 { "LblAtajo4Desc", "Hold to speak and transcribe text" },
@@ -344,7 +372,14 @@ namespace LectorGlobalApp
         public string TabVoicesTitle => Get("TabVoicesTitle");
         public string TabInsightsTitle => Get("TabInsightsTitle");
 
-                public string LblInicioTitle => Get("LblInicioTitle");
+                public string LblStatusReady => Get("LblStatusReady");
+        public string LblSelectText1 => Get("LblSelectText1");
+        public string LblSelectText2 => Get("LblSelectText2");
+        public string LblHoldDictation1 => Get("LblHoldDictation1");
+        public string LblHoldDictation2 => Get("LblHoldDictation2");
+        public string LblMainVoice => Get("LblMainVoice");
+        public string LblReadSpeed => Get("LblReadSpeed");
+        public string LblInicioTitle => Get("LblInicioTitle");
         public string LblInicioDesc => Get("LblInicioDesc");
         public string LblLanguageSelect => Get("LblLanguageSelect");
         public string LblAvailableVoices => Get("LblAvailableVoices");
@@ -367,6 +402,13 @@ namespace LectorGlobalApp
         public string LblCurrentStreak => Get("LblCurrentStreak");
         public string LblKeepUsing => Get("LblKeepUsing");
         public string LblReadingHistory => Get("LblReadingHistory");
+        public string LblStreakDesc => Get("LblStreakDesc");
+        public string LblTimeSavedDesc => Get("LblTimeSavedDesc");
+        public string LblActivationsDesc => Get("LblActivationsDesc");
+        public string LblReadWords => Get("LblReadWords");
+        public string LblDictatedWords => Get("LblDictatedWords");
+        public string LblToday => Get("LblToday");
+        public string LblHistoricalTotal => Get("LblHistoricalTotal");
         public string LblAppSettings => Get("LblAppSettings");
         public string LblLaunchAtLogin => Get("LblLaunchAtLogin");
         public string LblAppLanguage => Get("LblAppLanguage");

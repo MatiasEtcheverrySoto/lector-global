@@ -97,13 +97,6 @@ namespace LectorGlobalApp
             }
         }
 
-        private async void BtnApple_Click(object sender, RoutedEventArgs e)
-        {
-            if (await AuthManager.OAuthLogin("Apple"))
-            {
-                this.Close();
-            }
-        }
 
         private void ShowError(string msg)
         {

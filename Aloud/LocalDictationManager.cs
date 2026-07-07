@@ -1,7 +1,5 @@
 using System;
 using System.IO;
-using System.IO.Compression;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Vosk;
 using NAudio.Wave;
@@ -28,51 +26,33 @@ namespace LectorGlobalApp
         {
             Vosk.Vosk.SetLogLevel(-1); // Disable Vosk logging to console
             
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string appFolder = Path.Combine(appData, "LectorGlobal");
+            string appFolder = AppDomain.CurrentDomain.BaseDirectory;
             _modelPath = Path.Combine(appFolder, "vosk-model-small-es-0.42");
         }
 
-        public async Task InitializeAsync()
+        public async Task<bool> InitializeAsync()
         {
             try
             {
-                if (!Directory.Exists(_modelPath))
+                if (_model == null)
                 {
-                    await DownloadModelAsync();
-                }
+                    if (!Directory.Exists(_modelPath))
+                    {
+                        OnError?.Invoke($"Error: No se encontró el modelo en '{_modelPath}'");
+                        return false;
+                    }
 
-                _model = new Model(_modelPath);
-                OnModelReady?.Invoke();
+                    _model = new Model(_modelPath);
+                    OnModelReady?.Invoke();
+                }
+                return true;
             }
             catch (Exception ex)
             {
+                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "vosk_error.txt"), ex.ToString());
                 OnError?.Invoke($"Error al inicializar la IA: {ex.Message}");
+                return false;
             }
-        }
-
-        private async Task DownloadModelAsync()
-        {
-            string url = "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip";
-            string zipPath = _modelPath + ".zip";
-
-            Directory.CreateDirectory(Path.GetDirectoryName(_modelPath));
-
-            using (var client = new HttpClient())
-            {
-                OnModelDownloadProgress?.Invoke("Descargando modelo de voz (40MB)...");
-                var response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                using (var fs = new FileStream(zipPath, FileMode.Create))
-                {
-                    await response.Content.CopyToAsync(fs);
-                }
-            }
-
-            OnModelDownloadProgress?.Invoke("Extrayendo modelo...");
-            ZipFile.ExtractToDirectory(zipPath, Path.GetDirectoryName(_modelPath));
-            File.Delete(zipPath);
         }
 
         public void StartDictation()

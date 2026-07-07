@@ -45,10 +45,10 @@ namespace LectorGlobalApp
         private System.Windows.Forms.NotifyIcon trayIcon;
         private RawKeyboardHook rawHook;
         private bool forceExit = false;
-        
         private LocalDictationManager dictationManager;
         private bool isDictationActive = false;
-        private int dictationInjectedLength = 0;
+        private bool cancelInjection = false;
+        private DictationOverlayWindow _overlayWindow;
 
         private string currentText = "";
         private Queue<string> playlist = new Queue<string>();
@@ -67,14 +67,8 @@ namespace LectorGlobalApp
             dictationManager = new LocalDictationManager();
             dictationManager.OnPartialResult += DictationManager_OnPartialResult;
             dictationManager.OnResult += DictationManager_OnResult;
-            dictationManager.OnModelDownloadProgress += (msg) => {
-                Dispatcher.Invoke(() => TxtDictationStatus.Text = msg);
-            };
-            dictationManager.OnModelReady += () => {
-                Dispatcher.Invoke(() => TxtDictationStatus.Text = "Escuchando... (Vosk AI)");
-            };
             dictationManager.OnError += (err) => {
-                Dispatcher.Invoke(() => TxtDictationStatus.Text = "Error: " + err);
+                // Ignore or log error
             };
 
             LoadVoices();
@@ -125,6 +119,12 @@ namespace LectorGlobalApp
                                     break;
                                 }
                             }
+                        }
+                        else if (CmbLanguage != null && CmbLanguage.ItemsSource != null)
+                        {
+                            var list = CmbLanguage.ItemsSource as List<AppLanguage>;
+                            if (list != null && list.Count > 0)
+                                CmbLanguage.SelectedItem = list[0];
                         }
 
                         var valVoiceLang = key.GetValue("VoiceLang");
@@ -360,14 +360,35 @@ namespace LectorGlobalApp
                     if (!isDictationActive)
                     {
                         isDictationActive = true;
+                        cancelInjection = false;
                         Dispatcher.Invoke(() => {
-                            OverlayDictation.Visibility = Visibility.Visible;
-                            TxtDictationStatus.Text = "Iniciando IA...";
+                            _overlayWindow = new DictationOverlayWindow();
+                            _overlayWindow.OnCancel += () => {
+                                cancelInjection = true;
+                                dictationManager.StopDictation();
+                                isDictationActive = false;
+                                _overlayWindow.Close();
+                            };
+                            _overlayWindow.OnConfirm += () => {
+                                dictationManager.StopDictation();
+                                isDictationActive = false;
+                                _overlayWindow.Close();
+                            };
+                            _overlayWindow.Show();
                         });
                         
                         Task.Run(async () => {
-                            await dictationManager.InitializeAsync();
-                            dictationManager.StartDictation();
+                            bool initSuccess = await dictationManager.InitializeAsync();
+                            if (initSuccess)
+                            {
+                                dictationManager.StartDictation();
+                            }
+                            else
+                            {
+                                isDictationActive = false;
+                                await Task.Delay(2000);
+                                Dispatcher.Invoke(() => { _overlayWindow?.Close(); });
+                            }
                         });
 
                         if (id == 4)
@@ -385,14 +406,14 @@ namespace LectorGlobalApp
                             
                             dictationManager.StopDictation();
                             isDictationActive = false;
-                            Dispatcher.Invoke(() => OverlayDictation.Visibility = Visibility.Collapsed);
+                            Dispatcher.Invoke(() => { _overlayWindow?.Close(); });
                         }
                     }
                     else if (id == 5) // Toggle
                     {
                         dictationManager.StopDictation();
                         isDictationActive = false;
-                        Dispatcher.Invoke(() => OverlayDictation.Visibility = Visibility.Collapsed);
+                        Dispatcher.Invoke(() => { _overlayWindow?.Close(); });
                     }
                 }
             }
@@ -406,21 +427,9 @@ namespace LectorGlobalApp
         {
             Dispatcher.Invoke(() =>
             {
-                for (int i = 0; i < dictationInjectedLength; i++)
+                if (_overlayWindow != null)
                 {
-                    keybd_event(0x08, 0, 0, UIntPtr.Zero); // Backspace
-                    keybd_event(0x08, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-                }
-
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    string toInject = text + " ";
-                    System.Windows.Forms.SendKeys.SendWait(toInject);
-                    dictationInjectedLength = toInject.Length;
-                }
-                else
-                {
-                    dictationInjectedLength = 0;
+                    _overlayWindow.UpdateText(text);
                 }
             });
         }
@@ -429,20 +438,19 @@ namespace LectorGlobalApp
         {
             Dispatcher.Invoke(() =>
             {
-                for (int i = 0; i < dictationInjectedLength; i++)
+                if (_overlayWindow != null)
                 {
-                    keybd_event(0x08, 0, 0, UIntPtr.Zero);
-                    keybd_event(0x08, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    _overlayWindow.UpdateText(""); // Limpiar overlay
                 }
 
-                if (!string.IsNullOrWhiteSpace(text))
+                if (!string.IsNullOrWhiteSpace(text) && !cancelInjection)
                 {
                     string toInject = text + " ";
+                    
+                    // Inyectar texto final directamente, sin borrar nada
                     System.Windows.Forms.SendKeys.SendWait(toInject);
                     UpdateStatsOnDictation(text.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length);
                 }
-                
-                dictationInjectedLength = 0;
             });
         }
 
@@ -494,7 +502,6 @@ namespace LectorGlobalApp
                 new AppLanguage { Name = "English", Code = "en" }
             };
             CmbLanguage.ItemsSource = langs;
-            if (langs.Count > 0) CmbLanguage.SelectedItem = langs[0];
         }
 
         private void LoadVoices()
@@ -1157,6 +1164,7 @@ namespace LectorGlobalApp
             public int WordsToday { get; set; } = 0;
             public int WordsTotal { get; set; } = 0;
             public int ActivationsToday { get; set; } = 0;
+            public int ActivationsTotal { get; set; } = 0;
             public int StreakDays { get; set; } = 0;
             public DateTime LastUsedDate { get; set; } = DateTime.MinValue;
             public double TimeSavedMinutes { get; set; } = 0;
@@ -1215,6 +1223,7 @@ namespace LectorGlobalApp
             _stats.WordsToday += wordCount;
             _stats.WordsTotal += wordCount;
             _stats.ActivationsToday++;
+            _stats.ActivationsTotal++;
             _stats.LastUsedDate = DateTime.Now;
             
             double visualWpm = 200.0;
@@ -1242,6 +1251,7 @@ namespace LectorGlobalApp
             _stats.DictatedWordsToday += wordCount;
             _stats.DictatedWordsTotal += wordCount;
             _stats.DictationActivations++;
+            _stats.ActivationsTotal++;
             _stats.LastUsedDate = DateTime.Now;
             
             SaveStats();
@@ -1261,9 +1271,12 @@ namespace LectorGlobalApp
             
             if (TxtTimeSaved != null) TxtTimeSaved.Text = $"{Math.Round(_stats.TimeSavedMinutes, 1)} min";
             
-            if (TxtActivations != null) TxtActivations.Text = (_stats.ActivationsToday + _stats.DictationActivations).ToString("N0");
+            if (TxtActivations != null) TxtActivations.Text = _stats.ActivationsTotal.ToString("N0");
             
-            if (TxtStreak != null) TxtStreak.Text = $"{_stats.StreakDays} días";
+            if (TxtStreak != null) 
+            {
+                TxtStreak.Text = _stats.StreakDays == 1 ? "1 Día" : $"{_stats.StreakDays} Días";
+            }
             
             if (TxtDictatedWordsTotal != null) TxtDictatedWordsTotal.Text = _stats.DictatedWordsTotal.ToString("N0");
             if (TxtDictatedWordsToday != null) TxtDictatedWordsToday.Text = _stats.DictatedWordsToday.ToString("N0");

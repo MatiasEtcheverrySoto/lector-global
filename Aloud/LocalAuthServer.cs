@@ -20,6 +20,7 @@ namespace LectorGlobalApp
                 {
                     try
                     {
+                        string tokenData = "";
                         while (listener.IsListening)
                         {
                             var context = await listener.GetContextAsync();
@@ -28,43 +29,76 @@ namespace LectorGlobalApp
 
                             if (request.Url.AbsolutePath.Contains("/api/token"))
                             {
-                                string tokenData = "";
                                 if (request.HttpMethod == "POST")
                                 {
                                     using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
                                     {
                                         tokenData = await reader.ReadToEndAsync();
                                     }
+                                    byte[] okBuffer = Encoding.UTF8.GetBytes("OK");
+                                    response.ContentLength64 = okBuffer.Length;
+                                    await response.OutputStream.WriteAsync(okBuffer, 0, okBuffer.Length);
+                                    response.Close();
                                 }
-                                
-                                string responseString = "<html><body><h2>Autenticación completada. Ya puedes volver a la aplicación Lector Global.</h2><script>setTimeout(function(){window.close();}, 2000);</script></body></html>";
-                                byte[] buffer = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = buffer.Length;
-                                await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                                response.Close();
-
-                                if (!string.IsNullOrEmpty(tokenData))
+                                else if (request.HttpMethod == "GET")
                                 {
-                                    tcs.TrySetResult(tokenData);
+                                    string responseString = @"
+                                    <html>
+                                    <head>
+                                        <title>Autenticación Completada</title>
+                                        <style>
+                                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0F172A; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                                            .card { background-color: #1E293B; padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); text-align: center; }
+                                            h2 { color: #10B981; margin-bottom: 10px; }
+                                            p { color: #94A3B8; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class='card'>
+                                            <h2>✅ Autenticación Exitosa</h2>
+                                            <p>Ya puedes cerrar esta pestaña y volver a la aplicación Lector Global.</p>
+                                        </div>
+                                        <script>setTimeout(function(){window.close();}, 2000);</script>
+                                    </body>
+                                    </html>";
+                                    byte[] buffer = Encoding.UTF8.GetBytes(responseString);
+                                    response.ContentLength64 = buffer.Length;
+                                    await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                                    response.Close();
+
+                                    if (!string.IsNullOrEmpty(tokenData))
+                                    {
+                                        tcs.TrySetResult(tokenData);
+                                    }
                                 }
                             }
                             else
                             {
                                 string html = @"
                                 <html>
-                                <head><title>Autorizando...</title></head>
+                                <head>
+                                    <title>Autorizando...</title>
+                                    <style>
+                                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0F172A; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                                        .card { background-color: #1E293B; padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); text-align: center; }
+                                        h2 { color: #3B82F6; margin-bottom: 10px; }
+                                    </style>
+                                </head>
                                 <body>
-                                    <h2>Iniciando sesión...</h2>
+                                    <div class='card'>
+                                        <h2>⏳ Iniciando sesión...</h2>
+                                        <p style='color: #94A3B8;'>Por favor, espera un momento.</p>
+                                    </div>
                                     <script>
                                         const hash = window.location.hash;
                                         const query = window.location.search;
                                         const data = hash ? hash : query;
-                                        fetch('/api/token', {
+                                        fetch('api/token', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'text/plain' },
                                             body: data
                                         }).then(() => {
-                                            window.location.href = '/api/token?success=1';
+                                            window.location.href = 'api/token?success=1';
                                         });
                                     </script>
                                 </body>

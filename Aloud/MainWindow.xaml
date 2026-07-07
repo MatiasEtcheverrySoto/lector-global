@@ -174,6 +174,7 @@
         </Style>
 
         <Style x:Key="WindowCloseBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -282,9 +283,15 @@
                               Stroke="{DynamicResource TextMuted}" StrokeThickness="2" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
-                        <Button Content="—" Width="45" Height="40" Background="Transparent" Foreground="{DynamicResource TextMuted}" BorderThickness="0" Click="BtnMinimize_Click" FontSize="16" FontWeight="Bold" Style="{StaticResource WindowControlBtn}"/>
-                        <Button x:Name="BtnMaximize" Content="☐" Width="45" Height="40" Background="Transparent" Foreground="{DynamicResource TextMuted}" BorderThickness="0" Click="BtnMaximize_Click" FontSize="16" FontWeight="Bold" Style="{StaticResource WindowControlBtn}"/>
-                        <Button Content="✕" Width="45" Height="40" Background="Transparent" Foreground="#EF4444" BorderThickness="0" Click="BtnClose_Click" FontSize="16" FontWeight="Bold" Style="{StaticResource WindowCloseBtn}"/>
+                        <Button x:Name="BtnMinimize" Width="45" Height="40" Background="Transparent" BorderThickness="0" Click="BtnMinimize_Click" Style="{StaticResource WindowControlBtn}" Cursor="Hand">
+                            <Path Data="M0,5 H10" Stroke="{DynamicResource TextMuted}" StrokeThickness="1" SnapsToDevicePixels="True" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="BtnMaximize" Width="45" Height="40" Background="Transparent" BorderThickness="0" Click="BtnMaximize_Click" Style="{StaticResource WindowControlBtn}" Cursor="Hand">
+                            <Path Data="M0,0 H10 V10 H0 Z" Stroke="{DynamicResource TextMuted}" StrokeThickness="1" SnapsToDevicePixels="True" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="BtnClose" Width="45" Height="40" Background="Transparent" BorderThickness="0" Click="BtnClose_Click" Style="{StaticResource WindowCloseBtn}" Cursor="Hand">
+                            <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
                     </StackPanel>
                 </Grid>
 
@@ -292,95 +299,137 @@
                 <Grid Grid.Row="1" Margin="30,10,30,30">
                     
                     <!-- PANEL: INICIO -->
-                                        <ScrollViewer x:Name="PanelInicio" VerticalScrollBarVisibility="Auto" Visibility="Visible">
+                                        <ScrollViewer x:Name="PanelInicio" VerticalScrollBarVisibility="Hidden" Visibility="Visible">
                         <StackPanel>
-                            <Grid MinHeight="{Binding ActualHeight, ElementName=PanelInicio, FallbackValue=400}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*"/>
-                                    <ColumnDefinition Width="1*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Izquierda: Controles -->
-                                <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                                    <Border x:Name="StatusCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" Margin="0,0,0,20">
+                            <Grid>
+                                <!-- Izquierda: Controles (ahora ocupa todo el ancho) -->
+                                <StackPanel>
+                                    <Border x:Name="StatusCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="25" Margin="0,0,0,20">
                                         <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#10B981" Margin="0,0,10,0"/>
-                                            <TextBlock x:Name="StatusText" Text="{Binding StatusActive}" Foreground="{DynamicResource TextMain}" FontSize="15" FontWeight="SemiBold"/>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,15">
+                                                <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#10B981" Margin="0,0,10,0"/>
+                                                <TextBlock x:Name="StatusText" Text="{Binding LblStatusReady}" Foreground="{DynamicResource TextMain}" FontSize="24" FontWeight="Bold"/>
+                                            </StackPanel>
+                                            <WrapPanel Margin="0,0,0,10" VerticalAlignment="Center">
+                                                <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Speaker%20high%20volume/3D/speaker_high_volume_3d.png" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <TextBlock Text="{Binding LblSelectText1}" Foreground="{DynamicResource TextMuted}" FontSize="15" VerticalAlignment="Center"/>
+                                                
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyZ, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" VerticalAlignment="Center">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="4" Padding="6,2" Margin="0,0,4,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="12"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                
+                                                <TextBlock Text="{Binding LblSelectText2}" Foreground="{DynamicResource TextMuted}" FontSize="15" VerticalAlignment="Center"/>
+                                            </WrapPanel>
+                                            
+                                            <WrapPanel VerticalAlignment="Center">
+                                                <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Studio%20microphone/3D/studio_microphone_3d.png" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <TextBlock Text="{Binding LblHoldDictation1}" Foreground="{DynamicResource TextMuted}" FontSize="15" VerticalAlignment="Center"/>
+                                                
+                                                <ItemsControl ItemsSource="{Binding ElementName=TxtHotkeyS, Path=Text, Converter={StaticResource HotkeyToTokensConverter}}" VerticalAlignment="Center">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource SidebarBorderBg}" CornerRadius="4" Padding="6,2" Margin="0,0,4,0">
+                                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMain}" FontWeight="SemiBold" FontSize="12"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                
+                                                <TextBlock Text="{Binding LblHoldDictation2}" Foreground="{DynamicResource TextMuted}" FontSize="15" VerticalAlignment="Center"/>
+                                            </WrapPanel>
                                         </StackPanel>
                                     </Border>
 
-                                    <Border x:Name="ControlsCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20">
+                                    <Border x:Name="ControlsCard" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="25">
                                         <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
                                         <StackPanel>
-                                            <TextBlock x:Name="VoicesLabel" Text="{Binding LblVoice}" Foreground="{DynamicResource TextMuted}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                            <local:SearchableComboBox x:Name="CmbVoices" Margin="0,0,0,25" SelectionChanged="CmbVoices_SelectionChanged" SearchPlaceholder="Buscar voz..."/>
+                                            <TextBlock x:Name="VoicesLabel" Text="{Binding LblMainVoice}" Foreground="{DynamicResource TextMain}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                                            <local:SearchableComboBox x:Name="CmbVoices" Margin="0,0,0,30" SelectionChanged="CmbVoices_SelectionChanged" SearchPlaceholder="Buscar voz..."/>
 
-                                            <TextBlock x:Name="SpeedLabel" Text="{Binding LblSpeed}" Foreground="{DynamicResource TextMuted}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                            <TextBlock x:Name="SpeedLabel" Text="{Binding LblReadSpeed}" Foreground="{DynamicResource TextMain}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="50"/>
+                                                    <ColumnDefinition Width="60"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Slider x:Name="SldSpeed" Minimum="-10" Maximum="10" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="SldSpeed_ValueChanged"/>
-                                                <TextBlock x:Name="TxtSpeedValue" Grid.Column="1" Text="x1.0" Foreground="{DynamicResource TextMain}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                                <!-- Slider estilizado fucsia -->
+                                                <Slider x:Name="SldSpeed" Minimum="-10" Maximum="10" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="SldSpeed_ValueChanged" Height="24">
+                                                    <Slider.Resources>
+                                                        <Style TargetType="Slider">
+                                                            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="Slider">
+                                                                        <Grid>
+                                                                            <Border Height="6" Background="{DynamicResource SidebarBorderBg}" CornerRadius="3" VerticalAlignment="Center"/>
+                                                                            <Track x:Name="PART_Track">
+                                                                                <Track.DecreaseRepeatButton>
+                                                                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
+                                                                                        <RepeatButton.Template>
+                                                                                            <ControlTemplate TargetType="RepeatButton">
+                                                                                                <Border Height="6" Background="{DynamicResource AccentColor}" CornerRadius="3,0,0,3" VerticalAlignment="Center"/>
+                                                                                            </ControlTemplate>
+                                                                                        </RepeatButton.Template>
+                                                                                    </RepeatButton>
+                                                                                </Track.DecreaseRepeatButton>
+                                                                                <Track.IncreaseRepeatButton>
+                                                                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
+                                                                                        <RepeatButton.Template>
+                                                                                            <ControlTemplate TargetType="RepeatButton">
+                                                                                                <Border Height="6" Background="Transparent" VerticalAlignment="Center"/>
+                                                                                            </ControlTemplate>
+                                                                                        </RepeatButton.Template>
+                                                                                    </RepeatButton>
+                                                                                </Track.IncreaseRepeatButton>
+                                                                                <Track.Thumb>
+                                                                                    <Thumb>
+                                                                                        <Thumb.Template>
+                                                                                            <ControlTemplate TargetType="Thumb">
+                                                                                                <Ellipse Width="16" Height="16" Fill="White" Stroke="{DynamicResource AccentColor}" StrokeThickness="2" Cursor="Hand">
+                                                                                                    <Ellipse.Effect>
+                                                                                                        <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="4" ShadowDepth="1"/>
+                                                                                                    </Ellipse.Effect>
+                                                                                                </Ellipse>
+                                                                                            </ControlTemplate>
+                                                                                        </Thumb.Template>
+                                                                                    </Thumb>
+                                                                                </Track.Thumb>
+                                                                            </Track>
+                                                                        </Grid>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </Slider.Resources>
+                                                </Slider>
+                                                <TextBlock x:Name="TxtSpeedValue" Grid.Column="1" Text="x1.0" Foreground="{DynamicResource TextMain}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                             </Grid>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
-
-                                                                <!-- Derecha: Estadísticas -->
-                                <Grid Grid.Column="1" Margin="15,0,0,0">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="15"/>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="15"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Palabras leídas -->
-                                    <Border Grid.Row="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20">
-                                        <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                                <TextBlock Text="📖" FontSize="14" Margin="0,0,5,0"/>
-                                                <TextBlock Text="{Binding StatWordsSub}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
-                                            </StackPanel>
-                                            <TextBlock x:Name="StatWords" Text="427" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    
-                                    <!-- Velocidad media -->
-                                    <Border Grid.Row="2" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20">
-                                        <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                                <TextBlock Text="⚡" FontSize="14" Margin="0,0,5,0"/>
-                                                <TextBlock Text="{Binding StatWpmSub}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
-                                            </StackPanel>
-                                            <TextBlock x:Name="StatWpm" Text="202" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    
-                                    <!-- Racha actual -->
-                                    <Border Grid.Row="4" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20">
-                                        <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                                <TextBlock Text="🔥" FontSize="14" Margin="0,0,5,0"/>
-                                                <TextBlock Text="{Binding StatStreakSub}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
-                                            </StackPanel>
-                                            <TextBlock x:Name="StatStreak" Text="1" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
                             </Grid>
                         </StackPanel>
                     </ScrollViewer>
 
                     <!-- PANEL: VOCES -->
-                    <ScrollViewer x:Name="PanelVoces" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                    <ScrollViewer x:Name="PanelVoces" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock Text="{Binding TabVoicesTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,20"/>
                             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="25">
@@ -429,7 +478,7 @@
                     </ScrollViewer>
 
                     <!-- PANEL: ATAJOS -->
-                    <ScrollViewer x:Name="PanelAtajos" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                    <ScrollViewer x:Name="PanelAtajos" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock Text="{Binding TabShortcutsTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,10"/>
                             <TextBlock Text="{Binding LblAtajosDesc}" FontSize="14" Foreground="{DynamicResource TextMuted}" Margin="0,0,0,25"/>
@@ -637,7 +686,7 @@
                     <Grid x:Name="PanelInsights" Visibility="Collapsed">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/> <!-- Title -->
-                            <RowDefinition Height="1.35*"/>
+                            <RowDefinition Height="1*"/>
                             <RowDefinition Height="10"/>
                             <RowDefinition Height="1*"/>
                             <RowDefinition Height="10"/>
@@ -649,15 +698,15 @@
                             <TextBlock Grid.Row="0" Text="{Binding TabInsightsTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,20"/>
                             
                             <!-- 1ra línea: Racha -->
-                            <Border Grid.Row="1" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="15">
+                            <Border Grid.Row="1" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="15,5">
                                 <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,0">
                                         <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Fire/3D/fire_3d.png" Width="24" Height="24" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock Text="{Binding LblCurrentStreak}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding LblCurrentStreak}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                    <TextBlock x:Name="TxtStreak" Text="0 días" FontSize="42" FontWeight="Bold" Foreground="#F59E0B" HorizontalAlignment="Center" Margin="0,10"/>
-                                    <TextBlock Text="Días consecutivos usando Lector o Dictado" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                    <TextBlock x:Name="TxtStreak" Text="0 Días" FontSize="42" FontWeight="Bold" Foreground="#F59E0B" HorizontalAlignment="Center" Margin="0,0"/>
+                                    <TextBlock Text="{Binding LblStreakDesc}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" TextAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
@@ -673,11 +722,11 @@
                                     <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
                                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                            <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Stopwatch/3D/stopwatch_3d.png" Width="20" Height="20" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock Text="{Binding LblTimeSaved}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
+                                            <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Stopwatch/3D/stopwatch_3d.png" Width="24" Height="24" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="{Binding LblTimeSaved}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock x:Name="TxtTimeSaved" Text="0 min" FontSize="32" FontWeight="Bold" Foreground="#10B981" TextAlignment="Center"/>
-                                        <TextBlock Text="En lecturas rápidas" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center" Margin="0,5,0,0"/>
+                                        <TextBlock Text="{Binding LblTimeSavedDesc}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
 
@@ -686,11 +735,11 @@
                                     <Border.Effect><DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/></Border.Effect>
                                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                            <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/High%20voltage/3D/high_voltage_3d.png" Width="20" Height="20" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock Text="{Binding LblActivations}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/>
+                                            <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/High%20voltage/3D/high_voltage_3d.png" Width="24" Height="24" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="{Binding LblActivations}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock x:Name="TxtActivations" Text="0" FontSize="32" FontWeight="Bold" Foreground="#3B82F6" TextAlignment="Center"/>
-                                        <TextBlock Text="Veces que activaste Lector o Dictado (Hoy)" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                        <TextBlock Text="{Binding LblActivationsDesc}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -706,7 +755,7 @@
                                     
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
                                         <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Open%20book/3D/open_book_3d.png" Width="24" Height="24" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock Text="Lector de Texto" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding LblReadWords}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     
                                     <Grid Grid.Row="1" HorizontalAlignment="Stretch">
@@ -715,11 +764,11 @@
                                             <ColumnDefinition Width="1*"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                            <TextBlock Text="Hoy" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding LblToday}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
                                             <TextBlock x:Name="TxtWordsToday" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                            <TextBlock Text="Total Histórico" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding LblHistoricalTotal}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
                                             <TextBlock x:Name="TxtWordsTotal" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
                                         </StackPanel>
                                     </Grid>
@@ -737,7 +786,7 @@
                                     
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
                                         <Image Source="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Studio%20microphone/3D/studio_microphone_3d.png" Width="24" Height="24" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock Text="Dictado de Voz" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding LblDictatedWords}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     
                                     <Grid Grid.Row="1" HorizontalAlignment="Stretch">
@@ -746,11 +795,11 @@
                                             <ColumnDefinition Width="1*"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                            <TextBlock Text="Hoy" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding LblToday}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
                                             <TextBlock x:Name="TxtDictatedWordsToday" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                            <TextBlock Text="Total Histórico" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding LblHistoricalTotal}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" TextAlignment="Center"/>
                                             <TextBlock x:Name="TxtDictatedWordsTotal" Text="0" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" TextAlignment="Center"/>
                                         </StackPanel>
                                     </Grid>
@@ -759,7 +808,7 @@
                     </Grid>
 
                     <!-- PANEL: AJUSTES -->
-                    <ScrollViewer x:Name="PanelAjustes" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                    <ScrollViewer x:Name="PanelAjustes" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
                         <ScrollViewer.Resources>
                             <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
                                 <Setter Property="Template">
@@ -782,7 +831,7 @@
                                 </Setter>
                             </Style>
                         </ScrollViewer.Resources>
-                        <StackPanel Margin="0,0,20,0">
+                        <StackPanel Margin="0">
                             <TextBlock Text="{Binding TabSettingsTitle}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,30"/>
                             
                             <!-- SECCIÓN GENERAL -->
@@ -863,7 +912,7 @@
                     </ScrollViewer>
 
                     <!-- PANEL: FEEDBACK -->
-                    <ScrollViewer x:Name="PanelFeedback" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                    <ScrollViewer x:Name="PanelFeedback" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock Text="{Binding LblSendFeedback}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextMain}" Margin="0,0,0,20"/>
                             
@@ -892,16 +941,7 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- DICTATION OVERLAY NOTIFICATION -->
-                    <Border x:Name="OverlayDictation" Background="{DynamicResource AccentColor}" CornerRadius="20" Padding="20,10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Visibility="Collapsed">
-                        <Border.Effect>
-                            <DropShadowEffect Color="#9333EA" Opacity="0.5" BlurRadius="20" ShadowDepth="0"/>
-                        </Border.Effect>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🎙️" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock x:Name="TxtDictationStatus" Text="{Binding StatusDictating}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+
 
                 </Grid>
             </Grid>
