@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
@@ -19,10 +20,24 @@ namespace LectorGlobalApp
             InitializeComponent();
         }
 
+        private bool _isClosing = false;
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             CenterWindow();
             StartWaveformAnimation();
+            
+            if (_isClosing) return;
+            
+            var animOpacity = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
+            var animTransform = new DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(200));
+            animTransform.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut };
+            
+            this.BeginAnimation(Window.OpacityProperty, animOpacity);
+            if (MainBorder.RenderTransform is TranslateTransform trans)
+            {
+                trans.BeginAnimation(TranslateTransform.YProperty, animTransform);
+            }
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -37,23 +52,12 @@ namespace LectorGlobalApp
             this.Top = workArea.Height - this.ActualHeight - 40; // 40px from bottom
         }
 
-        public void UpdateText(string text)
-        {
-            TxtPartial.Text = text;
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                TxtPartial.Margin = new Thickness(0, 0, 0, 0);
-            }
-            else
-            {
-                TxtPartial.Margin = new Thickness(0, 0, 15, 0);
-            }
-        }
+        public float CurrentAudioLevel { get; set; } = 0f;
 
         private void StartWaveformAnimation()
         {
             _animationTimer = new DispatcherTimer();
-            _animationTimer.Interval = TimeSpan.FromMilliseconds(150);
+            _animationTimer.Interval = TimeSpan.FromMilliseconds(100); // Faster updates for responsiveness
             _animationTimer.Tick += (s, e) =>
             {
                 AnimateBar(Bar1, 6, 14);
@@ -71,19 +75,40 @@ namespace LectorGlobalApp
 
         private void AnimateBar(System.Windows.Shapes.Rectangle bar, double min, double max)
         {
-            double newHeight = min + (_rnd.NextDouble() * (max - min));
-            var anim = new DoubleAnimation(newHeight, TimeSpan.FromMilliseconds(150));
+            double newHeight = 3; // flat
+
+            // Only move if we hear sound
+            if (CurrentAudioLevel > 0.02f) 
+            {
+                // Scale based on audio level, multiplier is arbitrary to make it look good
+                double scale = Math.Min(1.0, (CurrentAudioLevel - 0.02) * 5.0);
+                double scaledMin = 3 + (min - 3) * scale;
+                double scaledMax = 3 + (max - 3) * scale;
+
+                newHeight = scaledMin + (_rnd.NextDouble() * (scaledMax - scaledMin));
+            }
+
+            var anim = new DoubleAnimation(newHeight, TimeSpan.FromMilliseconds(100));
             bar.BeginAnimation(FrameworkElement.HeightProperty, anim);
         }
 
-        private void BtnCancel_MouseDown(object sender, MouseButtonEventArgs e)
+        public async void HideAndClose()
         {
-            OnCancel?.Invoke();
-        }
+            if (_isClosing) return;
+            _isClosing = true;
 
-        private void BtnConfirm_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            OnConfirm?.Invoke();
+            var animOpacity = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150));
+            var animTransform = new DoubleAnimation(0, 20, TimeSpan.FromMilliseconds(150));
+            animTransform.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn };
+            
+            this.BeginAnimation(Window.OpacityProperty, animOpacity);
+            if (MainBorder.RenderTransform is TranslateTransform trans)
+            {
+                trans.BeginAnimation(TranslateTransform.YProperty, animTransform);
+            }
+            
+            await System.Threading.Tasks.Task.Delay(200);
+            try { this.Close(); } catch { }
         }
 
         protected override void OnClosed(EventArgs e)

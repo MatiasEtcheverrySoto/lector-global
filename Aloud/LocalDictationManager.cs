@@ -21,6 +21,7 @@ namespace LectorGlobalApp
         public event Action<string> OnModelDownloadProgress;
         public event Action OnModelReady;
         public event Action<string> OnError;
+        public event Action<float> OnAudioLevel;
 
         public LocalDictationManager()
         {
@@ -58,21 +59,50 @@ namespace LectorGlobalApp
         public void StartDictation()
         {
             if (_isDictating) return;
+            
+            // Wait for previous waveIn to clean up if it's still stopping
+            int waitTimeout = 0;
+            while (_waveIn != null && waitTimeout < 20)
+            {
+                System.Threading.Thread.Sleep(50);
+                waitTimeout++;
+            }
+            if (_waveIn != null)
+            {
+                // Force cleanup if it took too long
+                _waveIn.Dispose();
+                _waveIn = null;
+                _recognizer?.Dispose();
+                _recognizer = null;
+            }
+
             if (_model == null)
             {
                 OnError?.Invoke("El modelo aún no está listo.");
                 return;
             }
 
-            _recognizer = new VoskRecognizer(_model, 16000.0f);
-            
-            _waveIn = new WaveInEvent();
-            _waveIn.WaveFormat = new WaveFormat(16000, 1);
-            _waveIn.DataAvailable += WaveIn_DataAvailable;
-            _waveIn.RecordingStopped += WaveIn_RecordingStopped;
-            
-            _isDictating = true;
-            _waveIn.StartRecording();
+            try
+            {
+                _recognizer = new VoskRecognizer(_model, 16000.0f);
+                
+                _waveIn = new WaveInEvent();
+                _waveIn.WaveFormat = new WaveFormat(16000, 1);
+                _waveIn.DataAvailable += WaveIn_DataAvailable;
+                _waveIn.RecordingStopped += WaveIn_RecordingStopped;
+                
+                _isDictating = true;
+                _waveIn.StartRecording();
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke($"Error al iniciar grabación: {ex.Message}");
+                _isDictating = false;
+                _waveIn?.Dispose();
+                _waveIn = null;
+                _recognizer?.Dispose();
+                _recognizer = null;
+            }
         }
 
         public void StopDictation()
@@ -86,6 +116,17 @@ namespace LectorGlobalApp
         private void WaveIn_DataAvailable(object sender, WaveInEventArgs e)
         {
             if (!_isDictating) return;
+
+            // Calculate Audio Level (RMS)
+            double sum = 0;
+            for (int i = 0; i < e.BytesRecorded; i += 2)
+            {
+                short sample = BitConverter.ToInt16(e.Buffer, i);
+                sum += sample * sample;
+            }
+            double rms = Math.Sqrt(sum / (e.BytesRecorded / 2.0));
+            float level = (float)(rms / 32768.0);
+            OnAudioLevel?.Invoke(level);
 
             if (_recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded))
             {
@@ -101,17 +142,24 @@ namespace LectorGlobalApp
 
         private void WaveIn_RecordingStopped(object sender, StoppedEventArgs e)
         {
-            if (_recognizer != null)
+            try
             {
-                string finalResult = _recognizer.FinalResult();
-                ProcessJsonResult(finalResult, true);
-                
-                _recognizer.Dispose();
-                _recognizer = null;
+                if (_recognizer != null)
+                {
+                    string finalResult = _recognizer.FinalResult();
+                    ProcessJsonResult(finalResult, true);
+                    
+                    _recognizer.Dispose();
+                }
             }
-            
-            _waveIn?.Dispose();
-            _waveIn = null;
+            catch { }
+            finally
+            {
+                _recognizer = null;
+                _waveIn?.Dispose();
+                _waveIn = null;
+                _isDictating = false;
+            }
         }
 
         private void ProcessJsonResult(string json, bool isFinal)

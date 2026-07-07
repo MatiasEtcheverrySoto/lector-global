@@ -17,6 +17,8 @@ using System.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Data;
 using System.Globalization;
+using WindowsInput;
+using WindowsInput.Native;
 
 namespace LectorGlobalApp
 {
@@ -55,6 +57,7 @@ namespace LectorGlobalApp
         private bool isProcessingHotkey = false;
         private bool isDarkMode = false; // Light mode default for Flow design
         private bool isSidebarOpen = true;
+        private bool isConfiguringHotkey = false;
 
         public MainWindow()
         {
@@ -67,6 +70,7 @@ namespace LectorGlobalApp
             dictationManager = new LocalDictationManager();
             dictationManager.OnPartialResult += DictationManager_OnPartialResult;
             dictationManager.OnResult += DictationManager_OnResult;
+            dictationManager.OnAudioLevel += DictationManager_OnAudioLevel;
             dictationManager.OnError += (err) => {
                 // Ignore or log error
             };
@@ -76,13 +80,18 @@ namespace LectorGlobalApp
             SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
             UpdateInsightsUI();
             LoadAppLanguages();
-            
             // Register auto start logic and initialize checkbox
             CheckRegistryStartup();
             CheckRegistryConfig();
 
             AuthManager.OnAuthStateChanged += UpdateAuthUI;
             UpdateAuthUI();
+
+            TxtHotkeyZ.PreviewKeyUp += HotkeyTextBox_PreviewKeyUp;
+            TxtHotkeyX.PreviewKeyUp += HotkeyTextBox_PreviewKeyUp;
+            TxtHotkeyA.PreviewKeyUp += HotkeyTextBox_PreviewKeyUp;
+            TxtHotkeyD.PreviewKeyUp += HotkeyTextBox_PreviewKeyUp;
+            TxtHotkeyS.PreviewKeyUp += HotkeyTextBox_PreviewKeyUp;
         }
 
         private void CheckRegistryConfig()
@@ -198,6 +207,8 @@ namespace LectorGlobalApp
 
             rawHook = new RawKeyboardHook();
             rawHook.OnPhysicalKeyPressed += (vkCode) => {
+                if (isConfiguringHotkey) return false;
+
                 int modifiers = 0;
                 if (rawHook.CtrlDown) modifiers |= MOD_CTRL;
                 if (rawHook.WinDown) modifiers |= MOD_WIN;
@@ -361,19 +372,8 @@ namespace LectorGlobalApp
                     {
                         isDictationActive = true;
                         cancelInjection = false;
-                        Dispatcher.Invoke(() => {
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => {
                             _overlayWindow = new DictationOverlayWindow();
-                            _overlayWindow.OnCancel += () => {
-                                cancelInjection = true;
-                                dictationManager.StopDictation();
-                                isDictationActive = false;
-                                _overlayWindow.Close();
-                            };
-                            _overlayWindow.OnConfirm += () => {
-                                dictationManager.StopDictation();
-                                isDictationActive = false;
-                                _overlayWindow.Close();
-                            };
                             _overlayWindow.Show();
                         });
                         
@@ -387,7 +387,7 @@ namespace LectorGlobalApp
                             {
                                 isDictationActive = false;
                                 await Task.Delay(2000);
-                                Dispatcher.Invoke(() => { _overlayWindow?.Close(); });
+                                System.Windows.Application.Current.Dispatcher.Invoke(() => { _overlayWindow?.HideAndClose(); });
                             }
                         });
 
@@ -406,14 +406,14 @@ namespace LectorGlobalApp
                             
                             dictationManager.StopDictation();
                             isDictationActive = false;
-                            Dispatcher.Invoke(() => { _overlayWindow?.Close(); });
+                            System.Windows.Application.Current.Dispatcher.Invoke(() => { _overlayWindow?.HideAndClose(); });
                         }
                     }
                     else if (id == 5) // Toggle
                     {
                         dictationManager.StopDictation();
                         isDictationActive = false;
-                        Dispatcher.Invoke(() => { _overlayWindow?.Close(); });
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => { _overlayWindow?.HideAndClose(); });
                     }
                 }
             }
@@ -423,33 +423,94 @@ namespace LectorGlobalApp
             }
         }
 
+        private string _lastPartialSent = "";
+        private InputSimulator _inputSimulator = new InputSimulator();
+
         private void DictationManager_OnPartialResult(string text)
         {
-            Dispatcher.Invoke(() =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (cancelInjection) return;
+
+                // Si el usuario mantiene pulsadas teclas modificadoras (ej. modo Push-to-Talk)
+                // NO inyectamos el texto en tiempo real para evitar atajos de teclado accidentales.
+                bool ctrlDown = (GetAsyncKeyState(0x11) & 0x8000) != 0;
+                bool altDown = (GetAsyncKeyState(0x12) & 0x8000) != 0;
+                bool lWinDown = (GetAsyncKeyState(0x5B) & 0x8000) != 0;
+                bool rWinDown = (GetAsyncKeyState(0x5C) & 0x8000) != 0;
+
+                if (ctrlDown || altDown || lWinDown || rWinDown)
+                {
+                    return; // Retrasar la inyección hasta el OnResult final
+                }
+
+                if (!string.IsNullOrWhiteSpace(text) && text != _lastPartialSent)
+                {
+                    if (_lastPartialSent.Length > 0)
+                    {
+                        System.Windows.Forms.SendKeys.SendWait("{BACKSPACE " + _lastPartialSent.Length + "}");
+                    }
+                    
+                    string safeText = text.Replace("{", "{{}")
+                                          .Replace("}", "{}}")
+                                          .Replace("+", "{+}")
+                                          .Replace("^", "{^}")
+                                          .Replace("%", "{%}")
+                                          .Replace("~", "{~}")
+                                          .Replace("(", "{(}")
+                                          .Replace(")", "{)}");
+                    System.Windows.Forms.SendKeys.SendWait(safeText);
+                    _lastPartialSent = text;
+                }
+            });
+        }
+
+        private void DictationManager_OnAudioLevel(float level)
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 if (_overlayWindow != null)
                 {
-                    _overlayWindow.UpdateText(text);
+                    _overlayWindow.CurrentAudioLevel = level;
                 }
             });
         }
 
         private void DictationManager_OnResult(string text)
         {
-            Dispatcher.Invoke(() =>
+            System.Windows.Application.Current.Dispatcher.Invoke(async () =>
             {
-                if (_overlayWindow != null)
-                {
-                    _overlayWindow.UpdateText(""); // Limpiar overlay
-                }
-
                 if (!string.IsNullOrWhiteSpace(text) && !cancelInjection)
                 {
-                    string toInject = text + " ";
-                    
-                    // Inyectar texto final directamente, sin borrar nada
-                    System.Windows.Forms.SendKeys.SendWait(toInject);
+                    // Esperar a que suelte las teclas modificadoras antes de inyectar el texto final
+                    while ((GetAsyncKeyState(0x11) & 0x8000) != 0 || 
+                           (GetAsyncKeyState(0x12) & 0x8000) != 0 || 
+                           (GetAsyncKeyState(0x5B) & 0x8000) != 0 || 
+                           (GetAsyncKeyState(0x5C) & 0x8000) != 0)
+                    {
+                        await Task.Delay(50);
+                    }
+
+                    if (_lastPartialSent.Length > 0)
+                    {
+                        System.Windows.Forms.SendKeys.SendWait("{BACKSPACE " + _lastPartialSent.Length + "}");
+                        _lastPartialSent = "";
+                    }
+
+                    string finalSafe = (text + " ").Replace("{", "{{}")
+                                                   .Replace("}", "{}}")
+                                                   .Replace("+", "{+}")
+                                                   .Replace("^", "{^}")
+                                                   .Replace("%", "{%}")
+                                                   .Replace("~", "{~}")
+                                                   .Replace("(", "{(}")
+                                                   .Replace(")", "{)}");
+                    System.Windows.Forms.SendKeys.SendWait(finalSafe);
                     UpdateStatsOnDictation(text.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length);
+                }
+                else
+                {
+                    _lastPartialSent = ""; // Clear if empty result
                 }
             });
         }
@@ -606,7 +667,7 @@ namespace LectorGlobalApp
 
         private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
                 this.DragMove();
         }
 
@@ -1052,37 +1113,75 @@ namespace LectorGlobalApp
             if ((mod & 1) != 0) s += "Alt + ";       // MOD_ALT
             if ((mod & 4) != 0) s += "Shift + ";     // MOD_SHIFT
             
-            s += ((System.Windows.Forms.Keys)key).ToString();
+            if (key != 0)
+                s += ((System.Windows.Forms.Keys)key).ToString();
+            else if (s.EndsWith(" + "))
+                s = s.Substring(0, s.Length - 3);
+
+            if (string.IsNullOrEmpty(s)) s = "Presiona teclas...";
+
             return s;
         }
 
         private void HotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
-            if (sender is System.Windows.Controls.TextBox txt) txt.Text = Strings.Instance.StatusListening;
+            isConfiguringHotkey = true;
+            if (sender is System.Windows.Controls.TextBox txt) txt.Text = "Presiona teclas...";
+            
+            // Unregister hotkeys while registering a new one to avoid conflicts
+            for (int i = 1; i <= 5; i++) UnregisterHotKey(windowHandle, i);
         }
         
         private void HotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
+            isConfiguringHotkey = false;
             UpdateHotkeysText();
+            SaveHotkeys();
+        }
+
+        private void HotkeyTextBox_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            int key = KeyInterop.VirtualKeyFromKey(e.Key == Key.System ? e.SystemKey : e.Key);
+            bool isModifier = (key == 16 || key == 160 || key == 161 || // Shift
+                               key == 17 || key == 162 || key == 163 || // Ctrl
+                               key == 18 || key == 164 || key == 165 || // Alt
+                               key == 91 || key == 92);                 // Win
+
+            if (!isModifier)
+            {
+                if (sender is System.Windows.Controls.TextBox txt)
+                {
+                    txt.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                }
+            }
         }
         
         private void HotkeyTextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             e.Handled = true;
             int key = KeyInterop.VirtualKeyFromKey(e.Key == Key.System ? e.SystemKey : e.Key);
-            if (key == 16 || key == 160 || key == 161 || // Shift
-                key == 17 || key == 162 || key == 163 || // Ctrl
-                key == 18 || key == 164 || key == 165 || // Alt
-                key == 91 || key == 92)                  // Win
-                return;
+            
+            bool isModifier = (key == 16 || key == 160 || key == 161 || // Shift
+                               key == 17 || key == 162 || key == 163 || // Ctrl
+                               key == 18 || key == 164 || key == 165 || // Alt
+                               key == 91 || key == 92);                 // Win
 
             int mod = 0;
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) mod |= MOD_CTRL;
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Windows)) mod |= MOD_WIN;
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) mod |= 1; // MOD_ALT
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) mod |= MOD_SHIFT;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) mod |= MOD_CTRL;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Windows) || Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin) || key == 91 || key == 92) mod |= MOD_WIN;
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) || Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt)) mod |= 1; // MOD_ALT
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) mod |= MOD_SHIFT;
             
             System.Windows.Controls.TextBox txt = sender as System.Windows.Controls.TextBox;
+
+            if (isModifier)
+            {
+                txt.Text = FormatHotkey(mod, 0);
+                return;
+            }
+
+            txt.Text = FormatHotkey(mod, key);
+
             if (txt == TxtHotkeyZ) { hkZ_Mod = mod; hkZ_Key = key; }
             else if (txt == TxtHotkeyX) { hkX_Mod = mod; hkX_Key = key; }
             else if (txt == TxtHotkeyA) { hkA_Mod = mod; hkA_Key = key; }
@@ -1090,8 +1189,6 @@ namespace LectorGlobalApp
             else if (txt == TxtHotkeyS) { hkS_Mod = mod; hkS_Key = key; }
 
             UpdateHotkeysText();
-            SaveHotkeys();
-            txt.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
         }
         
         private void PencilZ_Click(object sender, MouseButtonEventArgs e)
