@@ -15,9 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="supabase-csharp" Version="0.16.2" />
     <PackageReference Include="System.Speech" Version="10.0.9" />
     <PackageReference Include="Velopack" Version="1.2.0" />
+    <PackageReference Include="Vosk" Version="0.3.38" />
   </ItemGroup>
 
   <ItemGroup>

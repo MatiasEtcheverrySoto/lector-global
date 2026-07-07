@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Win32;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Input;
@@ -44,6 +45,10 @@ namespace LectorGlobalApp
         private System.Windows.Forms.NotifyIcon trayIcon;
         private RawKeyboardHook rawHook;
         private bool forceExit = false;
+        
+        private LocalDictationManager dictationManager;
+        private bool isDictationActive = false;
+        private int dictationInjectedLength = 0;
 
         private string currentText = "";
         private Queue<string> playlist = new Queue<string>();
@@ -58,9 +63,23 @@ namespace LectorGlobalApp
             
             synth = new SpeechSynthesizer();
             synth.SpeakCompleted += Synth_SpeakCompleted;
-            
+
+            dictationManager = new LocalDictationManager();
+            dictationManager.OnPartialResult += DictationManager_OnPartialResult;
+            dictationManager.OnResult += DictationManager_OnResult;
+            dictationManager.OnModelDownloadProgress += (msg) => {
+                Dispatcher.Invoke(() => TxtDictationStatus.Text = msg);
+            };
+            dictationManager.OnModelReady += () => {
+                Dispatcher.Invoke(() => TxtDictationStatus.Text = "Escuchando... (Vosk AI)");
+            };
+            dictationManager.OnError += (err) => {
+                Dispatcher.Invoke(() => TxtDictationStatus.Text = "Error: " + err);
+            };
+
             LoadVoices();
             LoadStats();
+            SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
             UpdateInsightsUI();
             LoadAppLanguages();
             
@@ -336,30 +355,105 @@ namespace LectorGlobalApp
                     if (synth.Rate < 10) { synth.Rate++; SldSpeed.Value = synth.Rate; }
                     await RestartCurrentPlaybackAsync();
                 }
-                else if (id == 4 || id == 5) // Dictado (Nativo Win+H)
+                else if (id == 4 || id == 5) // Dictado (Vosk AI)
                 {
-                    // Liberar modificadores temporalmente para no interferir
-                    keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Ctrl
-                    keybd_event(0x12, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Alt
-                    keybd_event(0x10, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Shift
-                    keybd_event(0x5B, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // LWin
-                    keybd_event(0x5C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // RWin
+                    if (!isDictationActive)
+                    {
+                        isDictationActive = true;
+                        Dispatcher.Invoke(() => {
+                            OverlayDictation.Visibility = Visibility.Visible;
+                            TxtDictationStatus.Text = "Iniciando IA...";
+                        });
+                        
+                        Task.Run(async () => {
+                            await dictationManager.InitializeAsync();
+                            dictationManager.StartDictation();
+                        });
 
-                    await Task.Delay(50);
-
-                    // Enviar Win+H
-                    keybd_event(0x5B, 0, 0, UIntPtr.Zero); // Win down
-                    keybd_event(0x48, 0, 0, UIntPtr.Zero); // H down
-                    keybd_event(0x48, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // H up
-                    keybd_event(0x5B, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Win up
-
-                    // Registrar 1 minuto de dictado simulado para las estadísticas
-                    UpdateStatsOnDictation(15);
+                        if (id == 4)
+                        {
+                            // Esperar a soltar la tecla
+                            while ((GetAsyncKeyState(hkD_Key) & 0x8000) != 0 ||
+                                   (GetAsyncKeyState(0x11) & 0x8000) != 0 || 
+                                   (GetAsyncKeyState(0x12) & 0x8000) != 0 || 
+                                   (GetAsyncKeyState(0x10) & 0x8000) != 0 || 
+                                   (GetAsyncKeyState(0x5B) & 0x8000) != 0 || 
+                                   (GetAsyncKeyState(0x5C) & 0x8000) != 0)   
+                            {
+                                await Task.Delay(50);
+                            }
+                            
+                            dictationManager.StopDictation();
+                            isDictationActive = false;
+                            Dispatcher.Invoke(() => OverlayDictation.Visibility = Visibility.Collapsed);
+                        }
+                    }
+                    else if (id == 5) // Toggle
+                    {
+                        dictationManager.StopDictation();
+                        isDictationActive = false;
+                        Dispatcher.Invoke(() => OverlayDictation.Visibility = Visibility.Collapsed);
+                    }
                 }
             }
             finally
             {
                 isProcessingHotkey = false;
+            }
+        }
+
+        private void DictationManager_OnPartialResult(string text)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                for (int i = 0; i < dictationInjectedLength; i++)
+                {
+                    keybd_event(0x08, 0, 0, UIntPtr.Zero); // Backspace
+                    keybd_event(0x08, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                }
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    string toInject = text + " ";
+                    System.Windows.Forms.SendKeys.SendWait(toInject);
+                    dictationInjectedLength = toInject.Length;
+                }
+                else
+                {
+                    dictationInjectedLength = 0;
+                }
+            });
+        }
+
+        private void DictationManager_OnResult(string text)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                for (int i = 0; i < dictationInjectedLength; i++)
+                {
+                    keybd_event(0x08, 0, 0, UIntPtr.Zero);
+                    keybd_event(0x08, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                }
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    string toInject = text + " ";
+                    System.Windows.Forms.SendKeys.SendWait(toInject);
+                    UpdateStatsOnDictation(text.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length);
+                }
+                
+                dictationInjectedLength = 0;
+            });
+        }
+
+        private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            if (e.Mode == PowerModes.Suspend)
+            {
+                if (synth != null && synth.State == SynthesizerState.Speaking)
+                {
+                    synth.Pause();
+                }
             }
         }
 
